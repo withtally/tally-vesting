@@ -3,6 +3,7 @@ pragma solidity ^0.8.26;
 
 import { Test, console2 } from "forge-std/Test.sol";
 import { IMerkleVestingDeployer } from "../src/interfaces/IMerkleVestingDeployer.sol";
+import { MerkleVestingDeployer } from "../src/MerkleVestingDeployer.sol";
 import { MerkleTreeHelper } from "./helpers/MerkleTreeHelper.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -20,8 +21,8 @@ contract MockERC20 is ERC20 {
 contract MerkleVestingDeployerTest is Test {
     using MerkleTreeHelper for MerkleTreeHelper.Allocation[];
 
-    // Test contracts - will be set up once implementation exists
-    // IMerkleVestingDeployer public deployer;
+    // Test contracts
+    IMerkleVestingDeployer public deployer;
     MockERC20 public token;
 
     // Test data
@@ -61,9 +62,16 @@ contract MerkleVestingDeployerTest is Test {
 
         (merkleRoot, leaves) = allocations.buildTree();
 
-        // TODO: Deploy MerkleVestingDeployer and fund it
-        // deployer = new MerkleVestingDeployer(...)
-        // token.mint(address(deployer), TOTAL_ALLOCATION);
+        // Deploy MerkleVestingDeployer and fund it
+        deployer = new MerkleVestingDeployer(
+            address(token),
+            merkleRoot,
+            vestingStart,
+            VESTING_DURATION,
+            CLIFF_DURATION,
+            claimDeadline
+        );
+        token.mint(address(deployer), TOTAL_ALLOCATION);
     }
 
     // ============ Merkle Tree Helper Tests ============
@@ -113,11 +121,8 @@ contract MerkleVestingDeployerTest is Test {
         assertEq(computedHash, merkleRoot);
     }
 
-    // ============ Claim Tests (will fail until implementation exists) ============
+    // ============ Claim Tests ============
 
-    // TODO: Uncomment and implement once MerkleVestingDeployer exists
-
-    /*
     function test_claimDeploysVestingWallet() public {
         bytes32[] memory proof = MerkleTreeHelper.getProof(leaves, 0);
         
@@ -203,5 +208,4 @@ contract MerkleVestingDeployerTest is Test {
         vm.warp(vestingStart + VESTING_DURATION);
         // VestingWallet would return ALICE_AMOUNT vested here
     }
-    */
 }
