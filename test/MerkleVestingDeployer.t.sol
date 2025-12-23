@@ -6,6 +6,7 @@ import {IMerkleVestingDeployer} from "../src/interfaces/IMerkleVestingDeployer.s
 import {MerkleVestingDeployer} from "../src/MerkleVestingDeployer.sol";
 import {MerkleTreeHelper} from "./helpers/MerkleTreeHelper.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {VestingWallet} from "@openzeppelin/contracts/finance/VestingWallet.sol";
 
 /// @notice Mock ERC20 for testing
 contract MockERC20 is ERC20 {
@@ -67,6 +68,37 @@ contract MerkleVestingDeployerTest is Test {
             address(token), merkleRoot, vestingStart, VESTING_DURATION, CLIFF_DURATION, claimDeadline
         );
         token.mint(address(deployer), TOTAL_ALLOCATION);
+    }
+
+    // ============ Constructor Tests ============
+
+    function test_constructorRevertsOnZeroMerkleRoot() public {
+        vm.expectRevert(IMerkleVestingDeployer.ZeroMerkleRoot.selector);
+        new MerkleVestingDeployer(
+            address(token), bytes32(0), vestingStart, VESTING_DURATION, CLIFF_DURATION, claimDeadline
+        );
+    }
+
+    function test_constructorRevertsOnZeroVestingDuration() public {
+        vm.expectRevert(IMerkleVestingDeployer.ZeroVestingDuration.selector);
+        new MerkleVestingDeployer(address(token), merkleRoot, vestingStart, 0, CLIFF_DURATION, claimDeadline);
+    }
+
+    function test_constructorRevertsOnCliffExceedsDuration() public {
+        vm.expectRevert(IMerkleVestingDeployer.CliffExceedsDuration.selector);
+        new MerkleVestingDeployer(
+            address(token), merkleRoot, vestingStart, VESTING_DURATION, VESTING_DURATION + 1, claimDeadline
+        );
+    }
+
+    function test_constructorRevertsOnInvalidClaimDeadline() public {
+        // Deadline must be >= vestingStart + vestingDuration
+        uint64 invalidDeadline = vestingStart + VESTING_DURATION - 1;
+
+        vm.expectRevert(IMerkleVestingDeployer.InvalidClaimDeadline.selector);
+        new MerkleVestingDeployer(
+            address(token), merkleRoot, vestingStart, VESTING_DURATION, CLIFF_DURATION, invalidDeadline
+        );
     }
 
     // ============ Merkle Tree Helper Tests ============
@@ -178,6 +210,21 @@ contract MerkleVestingDeployerTest is Test {
         assertEq(balanceAfter - balanceBefore, TOTAL_ALLOCATION);
     }
 
+    function test_sweepPermissionless() public {
+        // Warp past deadline
+        vm.warp(claimDeadline + 1);
+
+        address randomUser = makeAddr("randomUser");
+        uint256 balanceBefore = token.balanceOf(treasury);
+
+        // Call sweep as a random user
+        vm.prank(randomUser);
+        deployer.sweep(treasury);
+
+        uint256 balanceAfter = token.balanceOf(treasury);
+        assertEq(balanceAfter - balanceBefore, TOTAL_ALLOCATION);
+    }
+
     function test_getVestingWalletIsDeterministic() public view {
         address predicted = deployer.getVestingWallet(alice);
 
@@ -234,5 +281,53 @@ contract MerkleVestingDeployerTest is Test {
         vm.prank(bob);
         vm.expectRevert(IMerkleVestingDeployer.InvalidProof.selector);
         deployer.claimFor(alice, wrongProof, ALICE_AMOUNT);
+    }
+
+    // ============ Fuzz Tests ============
+
+    function testFuzz_vestingSchedule(uint64 timestamp) public {
+        // Bound timestamp to reasonable range to avoid overflow/underflow in test logic
+        // but covering all phases: before start, before cliff, inside vesting, after vesting
+        uint64 lowerBound = vestingStart > 100 days ? vestingStart - 100 days : 0;
+        timestamp = uint64(bound(timestamp, lowerBound, vestingStart + VESTING_DURATION + 100 days));
+
+        bytes32[] memory proof = MerkleTreeHelper.getProof(leaves, 0);
+        vm.prank(alice);
+        address wallet = deployer.claim(proof, ALICE_AMOUNT);
+
+        vm.warp(timestamp);
+        uint256 vested = VestingWallet(payable(wallet)).vestedAmount(address(token), timestamp);
+
+        if (timestamp < vestingStart + CLIFF_DURATION) {
+            assertEq(vested, 0, "Should be 0 before cliff");
+        } else if (timestamp >= vestingStart + VESTING_DURATION) {
+            assertEq(vested, ALICE_AMOUNT, "Should be full amount after duration");
+        } else {
+            // Linear vesting
+            // OpenZeppelin VestingWallet linear formula: totalAllocation * (timestamp - start) / duration
+            uint256 expected = ALICE_AMOUNT * (timestamp - vestingStart) / VESTING_DURATION;
+            assertEq(vested, expected, "Should match linear vesting");
+        }
+    }
+
+    function testFuzz_claimWithInvalidProof(bytes32 fakeElement, uint256 index) public {
+        // Ensure we don't accidentally generate a valid proof element (extremely unlikely)
+        vm.assume(fakeElement != bytes32(0));
+
+        // Modifying the proof
+        bytes32[] memory proof = MerkleTreeHelper.getProof(leaves, 0);
+
+        // Ensure proof has length to avoid underflow
+        vm.assume(proof.length > 0);
+
+        // Bound index to proof length
+        index = bound(index, 0, proof.length - 1);
+
+        // Tamper with proof
+        proof[index] = fakeElement;
+
+        vm.prank(alice);
+        vm.expectRevert(IMerkleVestingDeployer.InvalidProof.selector);
+        deployer.claim(proof, ALICE_AMOUNT);
     }
 }

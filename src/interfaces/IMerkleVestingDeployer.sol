@@ -39,6 +39,18 @@ interface IMerkleVestingDeployer {
     /// @notice Thrown when a zero amount is provided
     error ZeroAmount();
 
+    /// @notice Thrown when a zero merkle root is provided
+    error ZeroMerkleRoot();
+
+    /// @notice Thrown when vesting duration is zero
+    error ZeroVestingDuration();
+
+    /// @notice Thrown when cliff duration exceeds vesting duration
+    error CliffExceedsDuration();
+
+    /// @notice Thrown when claim deadline is invalid (must be >= vestingStart + vestingDuration)
+    error InvalidClaimDeadline();
+
     /// @notice Thrown when there are no tokens to sweep
     error NothingToSweep();
 
@@ -78,10 +90,7 @@ interface IMerkleVestingDeployer {
     /// @param amount The amount in the leaf
     /// @param proof The merkle proof
     /// @return True if proof is valid
-    function verifyProof(address beneficiary, uint256 amount, bytes32[] calldata proof)
-        external
-        view
-        returns (bool);
+    function verifyProof(address beneficiary, uint256 amount, bytes32[] calldata proof) external view returns (bool);
 
     // ============ State-Changing Functions ============
 
@@ -103,7 +112,8 @@ interface IMerkleVestingDeployer {
         returns (address wallet);
 
     /// @notice Sweep unclaimed tokens after deadline
-    /// @dev Only callable after claimDeadline has passed
+    /// @dev Permissionless by design - anyone can call this function after claimDeadline.
+    ///      This ensures unclaimed tokens are never permanently locked in the contract.
     /// @param recipient Address to receive the unclaimed tokens
     function sweep(address recipient) external;
 }
