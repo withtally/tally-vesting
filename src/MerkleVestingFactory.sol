@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
-import { IMerkleVestingFactory } from "./interfaces/IMerkleVestingFactory.sol";
-import { MerkleVestingDeployer } from "./MerkleVestingDeployer.sol";
+import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
+import {IMerkleVestingFactory} from "./interfaces/IMerkleVestingFactory.sol";
+import {MerkleVestingDeployer} from "./MerkleVestingDeployer.sol";
 
 /// @title MerkleVestingFactory
 /// @notice Factory for deploying MerkleVestingDeployer contracts with CREATE2
@@ -22,14 +22,12 @@ contract MerkleVestingFactory is IMerkleVestingFactory {
         bytes32 salt
     ) public view returns (address) {
         // Compute the full salt including all parameters
-        bytes32 fullSalt = _computeSalt(
-            token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt
-        );
+        bytes32 fullSalt =
+            _computeSalt(token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt);
 
         // Get the creation bytecode
-        bytes memory bytecode = _getDeployerBytecode(
-            token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline
-        );
+        bytes memory bytecode =
+            _getDeployerBytecode(token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline);
 
         // Compute CREATE2 address
         return Create2.computeAddress(fullSalt, keccak256(bytecode));
@@ -52,20 +50,18 @@ contract MerkleVestingFactory is IMerkleVestingFactory {
         if (merkleRoot == bytes32(0)) revert ZeroMerkleRoot();
         if (vestingDuration == 0) revert ZeroVestingDuration();
         if (cliffDuration > vestingDuration) revert CliffExceedsDuration();
-        
+
         // Calculate vesting end timestamp
         uint64 vestingEnd = vestingStart + vestingDuration;
         if (claimDeadline < vestingEnd) revert InvalidClaimDeadline();
 
         // Compute the full salt including all parameters
-        bytes32 fullSalt = _computeSalt(
-            token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt
-        );
+        bytes32 fullSalt =
+            _computeSalt(token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt);
 
         // Get the creation bytecode
-        bytes memory bytecode = _getDeployerBytecode(
-            token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline
-        );
+        bytes memory bytecode =
+            _getDeployerBytecode(token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline);
 
         // Deploy via CREATE2
         deployer = Create2.deploy(0, fullSalt, bytecode);
@@ -87,9 +83,7 @@ contract MerkleVestingFactory is IMerkleVestingFactory {
         bytes32 salt
     ) internal pure returns (bytes32) {
         return keccak256(
-            abi.encodePacked(
-                token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt
-            )
+            abi.encodePacked(token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt)
         );
     }
 

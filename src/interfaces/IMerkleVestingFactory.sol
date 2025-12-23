@@ -12,9 +12,7 @@ interface IMerkleVestingFactory {
     /// @param token The token being vested
     /// @param merkleRoot The merkle root of allocations
     /// @param creator The address that created the deployer
-    event DeployerCreated(
-        address indexed deployer, address indexed token, bytes32 indexed merkleRoot, address creator
-    );
+    event DeployerCreated(address indexed deployer, address indexed token, bytes32 indexed merkleRoot, address creator);
 
     // ============ Errors ============
 

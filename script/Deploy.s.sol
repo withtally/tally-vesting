@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { Script, console2 } from "forge-std/Script.sol";
-import { MerkleVestingFactory } from "../src/MerkleVestingFactory.sol";
+import {Script, console2} from "forge-std/Script.sol";
+import {MerkleVestingFactory} from "../src/MerkleVestingFactory.sol";
 
 /// @title Deploy
 /// @notice Deployment script for MerkleVestingFactory
@@ -50,15 +50,8 @@ contract DeployVesting is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        address deployer = factory.deploy(
-            tokenAddress,
-            merkleRoot,
-            vestingStart,
-            vestingDuration,
-            cliffDuration,
-            claimDeadline,
-            salt
-        );
+        address deployer =
+            factory.deploy(tokenAddress, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt);
 
         console2.log("MerkleVestingDeployer deployed at:", deployer);
         console2.log("Token:", tokenAddress);

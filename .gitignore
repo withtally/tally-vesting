@@ -23,3 +23,6 @@ docs/
 # Coverage
 lcov.info
 coverage/
+
+# Seed output
+seed-output/

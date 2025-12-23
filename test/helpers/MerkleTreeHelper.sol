@@ -123,11 +123,7 @@ library MerkleTreeHelper {
     }
 
     /// @notice Helper to build tree from allocations
-    function buildTree(Allocation[] memory allocations)
-        internal
-        pure
-        returns (bytes32 root, bytes32[] memory leaves)
-    {
+    function buildTree(Allocation[] memory allocations) internal pure returns (bytes32 root, bytes32[] memory leaves) {
         leaves = new bytes32[](allocations.length);
         for (uint256 i = 0; i < allocations.length; i++) {
             leaves[i] = getLeaf(allocations[i]);

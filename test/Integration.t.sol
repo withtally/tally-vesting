@@ -12,6 +12,7 @@ import {VestingWallet} from "@openzeppelin/contracts/finance/VestingWallet.sol";
 /// @notice Mock ERC20 for testing
 contract MockERC20 is ERC20 {
     constructor() ERC20("Mock Token", "MOCK") {}
+
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
     }
@@ -66,13 +67,7 @@ contract IntegrationTest is Test {
         // 1. Factory deploys MerkleVestingDeployer
         bytes32 salt = keccak256("test_salt");
         address deployerAddr = factory.deploy(
-            address(token),
-            merkleRoot,
-            vestingStart,
-            VESTING_DURATION,
-            CLIFF_DURATION,
-            claimDeadline,
-            salt
+            address(token), merkleRoot, vestingStart, VESTING_DURATION, CLIFF_DURATION, claimDeadline, salt
         );
         IMerkleVestingDeployer deployer = IMerkleVestingDeployer(deployerAddr);
 
@@ -119,7 +114,7 @@ contract IntegrationTest is Test {
 
         // Move to end of vesting
         vm.warp(vestingStart + VESTING_DURATION);
-        
+
         // Release all for Carol
         vm.prank(carol);
         VestingWallet(payable(carolWallet)).release(address(token));
@@ -132,11 +127,11 @@ contract IntegrationTest is Test {
 
         // Move past deadline
         vm.warp(claimDeadline + 1);
-        
+
         // Sweep
         deployer.sweep(treasury);
         assertEq(token.balanceOf(treasury), DAVE_AMOUNT);
-        
+
         // Ensure deployer is empty
         assertEq(token.balanceOf(address(deployer)), 0);
     }
