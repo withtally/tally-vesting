@@ -1,0 +1,16 @@
+{
+  "name": "tally-vesting",
+  "private": true,
+  "packageManager": "pnpm@9.15.1",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "contracts:build": "pnpm --filter @tally-vesting/contracts build",
+    "contracts:test": "pnpm --filter @tally-vesting/contracts test",
+    "indexer:dev": "pnpm --filter @tally-vesting/indexer dev",
+    "indexer:start": "pnpm --filter @tally-vesting/indexer start",
+    "anvil": "pnpm --filter @tally-vesting/contracts anvil",
+    "seed": "pnpm --filter @tally-vesting/contracts seed"
+  }
+}

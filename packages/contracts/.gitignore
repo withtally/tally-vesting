@@ -1,0 +1,21 @@
+# Compiler files
+cache/
+out/
+
+# Broadcast logs (keep mainnet, ignore local)
+!/broadcast
+/broadcast/*/31337/
+/broadcast/**/dry-run/
+
+# Environment
+.env
+
+# Node
+node_modules/
+
+# Coverage
+lcov.info
+coverage/
+
+# Seed output
+seed-output/

@@ -1,0 +1,142 @@
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
+scalar BigInt
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type Meta {
+  status: JSON
+}
+
+type Query {
+  account(address: String!): account
+  accounts(where: accountFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): accountPage!
+  transferEvent(id: String!): transferEvent
+  transferEvents(where: transferEventFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): transferEventPage!
+  _meta: Meta
+}
+
+type account {
+  address: String!
+  balance: BigInt!
+  transferCount: Int!
+}
+
+type accountPage {
+  items: [account!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input accountFilter {
+  AND: [accountFilter]
+  OR: [accountFilter]
+  address: String
+  address_not: String
+  address_in: [String]
+  address_not_in: [String]
+  address_contains: String
+  address_not_contains: String
+  address_starts_with: String
+  address_ends_with: String
+  address_not_starts_with: String
+  address_not_ends_with: String
+  balance: BigInt
+  balance_not: BigInt
+  balance_in: [BigInt]
+  balance_not_in: [BigInt]
+  balance_gt: BigInt
+  balance_lt: BigInt
+  balance_gte: BigInt
+  balance_lte: BigInt
+  transferCount: Int
+  transferCount_not: Int
+  transferCount_in: [Int]
+  transferCount_not_in: [Int]
+  transferCount_gt: Int
+  transferCount_lt: Int
+  transferCount_gte: Int
+  transferCount_lte: Int
+}
+
+type transferEvent {
+  id: String!
+  from: String!
+  to: String!
+  value: BigInt!
+  timestamp: Int!
+  blockNumber: BigInt!
+}
+
+type transferEventPage {
+  items: [transferEvent!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input transferEventFilter {
+  AND: [transferEventFilter]
+  OR: [transferEventFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  from: String
+  from_not: String
+  from_in: [String]
+  from_not_in: [String]
+  from_contains: String
+  from_not_contains: String
+  from_starts_with: String
+  from_ends_with: String
+  from_not_starts_with: String
+  from_not_ends_with: String
+  to: String
+  to_not: String
+  to_in: [String]
+  to_not_in: [String]
+  to_contains: String
+  to_not_contains: String
+  to_starts_with: String
+  to_ends_with: String
+  to_not_starts_with: String
+  to_not_ends_with: String
+  value: BigInt
+  value_not: BigInt
+  value_in: [BigInt]
+  value_not_in: [BigInt]
+  value_gt: BigInt
+  value_lt: BigInt
+  value_gte: BigInt
+  value_lte: BigInt
+  timestamp: Int
+  timestamp_not: Int
+  timestamp_in: [Int]
+  timestamp_not_in: [Int]
+  timestamp_gt: Int
+  timestamp_lt: Int
+  timestamp_gte: Int
+  timestamp_lte: Int
+  blockNumber: BigInt
+  blockNumber_not: BigInt
+  blockNumber_in: [BigInt]
+  blockNumber_not_in: [BigInt]
+  blockNumber_gt: BigInt
+  blockNumber_lt: BigInt
+  blockNumber_gte: BigInt
+  blockNumber_lte: BigInt
+}

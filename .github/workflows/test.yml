@@ -9,9 +9,12 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  check:
-    name: Foundry project
+  contracts:
+    name: Contracts
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/contracts
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,20 +24,50 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Show Forge version
-        run: |
-          forge --version
+        run: forge --version
 
       - name: Run Forge fmt
-        run: |
-          forge fmt --check
+        run: forge fmt --check
         id: fmt
 
       - name: Run Forge build
-        run: |
-          forge build --sizes
+        run: forge build --sizes
         id: build
 
       - name: Run Forge tests
-        run: |
-          forge test -vvv
+        run: forge test -vvv
         id: test
+
+  indexer:
+    name: Indexer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Foundry (for ABI generation)
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Build contracts and generate ABIs
+        run: pnpm --filter @tally-vesting/contracts generate:abi
+
+      - name: Ponder codegen
+        run: pnpm --filter @tally-vesting/indexer codegen
+
+      - name: Type check indexer
+        run: pnpm --filter @tally-vesting/indexer exec tsc --noEmit

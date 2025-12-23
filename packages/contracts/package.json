@@ -1,0 +1,23 @@
+{
+  "name": "@tally-vesting/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Merkle-based vesting contracts using OpenZeppelin's VestingWallet",
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test",
+    "test:ci": "FOUNDRY_PROFILE=ci forge test",
+    "lint": "forge fmt --check",
+    "lint:fix": "forge fmt",
+    "clean": "forge clean && rm -rf cache out",
+    "anvil": "./script/anvil.sh",
+    "seed": "./script/seed.sh",
+    "generate:abi": "forge build && node scripts/export-abi.mjs"
+  },
+  "devDependencies": {
+    "fs-extra": "^11.2.0"
+  },
+  "files": [
+    "abi/**/*.json"
+  ]
+}
