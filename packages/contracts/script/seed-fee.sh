@@ -16,7 +16,9 @@ echo "Anvil is running. Deploying fee-enabled vesting campaign..."
 
 mkdir -p "$PROJECT_DIR/seed-output"
 
-forge script script/SeedWithFee.s.sol:SeedWithFee --rpc-url http://localhost:8545 --broadcast
+pushd "$SCRIPT_DIR" > /dev/null
+forge script SeedWithFee.s.sol:SeedWithFee --via-ir --rpc-url http://localhost:8545 --non-interactive --broadcast
+popd > /dev/null
 
 echo ""
 echo "Fee seed complete! Check seed-output/ for JSON data."

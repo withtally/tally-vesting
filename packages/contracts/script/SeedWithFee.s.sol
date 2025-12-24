@@ -19,11 +19,12 @@ contract MockToken is ERC20 {
 
 contract SeedWithFee is Script {
     using SeedHelper for SeedHelper.Allocation[];
+    MockToken public tokenInstance;
 
     address constant CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
     bytes32 constant FACTORY_SALT = keccak256("tally-vesting-factory-v1");
     address constant DETERMINISTIC_FACTORY = 0x6B51bD91c3FF15e34C56D62F7c77892DE7bA3786;
-    address constant PLATFORM_FEE_RECIPIENT = 0xFD8Fa0DD1fB34b47138bF04eA89D38462A828A46;
+    address constant PLATFORM_FEE_RECIPIENT = 0xFd8Fa0dD1FB34b47138BF04EA89d38462A828A46;
     uint16 constant PLATFORM_FEE_BPS = 250;
 
     uint256[] public amounts;
@@ -40,9 +41,15 @@ contract SeedWithFee is Script {
     function run() external {
         uint256 deployerPrivateKey = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
 
+        for (uint256 i = 0; i < 6; i++) {
+            vm.deal(vm.addr(i + 1), 10 ether);
+        }
+
         vm.startBroadcast(deployerPrivateKey);
 
         MockToken token = new MockToken();
+        tokenInstance = token;
+        address tokenAddress = address(token);
 
         if (CREATE2_DEPLOYER.code.length == 0) {
             vm.etch(CREATE2_DEPLOYER, hex"7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf3");
@@ -54,6 +61,7 @@ contract SeedWithFee is Script {
             bytes memory payload = abi.encodePacked(FACTORY_SALT, bytecode);
             (bool success,) = CREATE2_DEPLOYER.call(payload);
             require(success, "CREATE2 deployment failed");
+            vm.etch(DETERMINISTIC_FACTORY, type(MerkleVestingFactory).runtimeCode);
             factoryAddress = DETERMINISTIC_FACTORY;
         } else {
             factoryAddress = DETERMINISTIC_FACTORY;
@@ -78,7 +86,7 @@ contract SeedWithFee is Script {
         uint64 claimDeadline = vestingStart + vestingDuration + 180 days;
 
         address vestingDeployer = factory.deploy(
-            address(token),
+            tokenAddress,
             merkleRoot,
             vestingStart,
             vestingDuration,
@@ -91,36 +99,43 @@ contract SeedWithFee is Script {
 
         token.mint(vestingDeployer, totalAllocation);
 
+        for (uint256 i = 0; i < 6; i++) {
+            vm.deal(vm.addr(i + 1), 10 ether);
+        }
+
         IMerkleVestingDeployer vesting = IMerkleVestingDeployer(vestingDeployer);
 
         address[] memory wallets = new address[](6);
+        vm.stopBroadcast();
 
         for (uint256 i = 0; i < 6; i++) {
             uint256 userKey = i + 1;
             bytes32[] memory proof = SeedHelper.getProof(leaves, i);
 
+            vm.deal(vm.addr(userKey), 10 ether);
             vm.broadcast(userKey);
             wallets[i] = vesting.claim(proof, amounts[i]);
         }
 
-        vm.stopBroadcast();
+        for (uint256 i = 0; i < 6; i++) {
+            vm.deal(vm.addr(i + 1), 10 ether);
+        }
 
         vm.warp(vestingStart + vestingDuration);
 
         for (uint256 i = 0; i < 3; i++) {
             uint256 userKey = i + 1;
+            vm.deal(vm.addr(userKey), 10 ether);
             vm.broadcast(userKey);
-            VestingWalletFeeWrapper(payable(wallets[i])).release(address(token));
+            _releaseFromWrapper(wallets[i]);
         }
-
-        vm.stopBroadcast();
 
         console2.log("");
         console2.log("=== FEE SEED DATA ===");
         console2.log("{");
         console2.log('  "chainId": 31337,');
         console2.log('  "contracts": {');
-        console2.log('    "token": "%s",', vm.toString(address(token)));
+        console2.log('    "token": "%s",', vm.toString(address(tokenInstance)));
         console2.log('    "factory": "%s",', vm.toString(factoryAddress));
         console2.log('    "deployer": "%s"', vm.toString(vestingDeployer));
         console2.log("  },");
@@ -167,5 +182,9 @@ contract SeedWithFee is Script {
         console2.log("  ]");
         console2.log("}");
         console2.log("=== END FEE SEED DATA ===");
+    }
+
+    function _releaseFromWrapper(address wallet) internal {
+        VestingWalletFeeWrapper(payable(wallet)).release(address(tokenInstance));
     }
 }

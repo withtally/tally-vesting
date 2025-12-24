@@ -38,16 +38,58 @@ The Merkle server now:
 
 ## Seed Fixture
 
-`SeedWithFee.s.sol` deploys a deterministic factory + deployer with `platformFeeBps = 250` and claims for multiple beneficiaries to exercise the wrapper end-to-end. Run it with:
+`SeedWithFee.s.sol` deploys the canonical factory and a fee-enabled vesting campaign (platform fee BPS = 250) before running several claims/releases so the Ponder indexer and backend can see non-zero `feeAmount`/`feeRecipient` data. Since the script relies on Foundry's cheat codes to write code and balances, running it against the long-lived Anvil used by the indexer requires a few additional steps:
 
-```bash
-./packages/contracts/script/seed-fee.sh
-```
+1. Start Anvil (e.g. `tmux new-session -d -s tally-anvil 'cd /Users/.../tally-vesting && pnpm anvil'`) so it keeps running in the background.
+2. Patch the canonical CREATE2 deployer and factory codes into that node:
 
-or via the workspace alias:
+   ```bash
+   # canonical deployer bytecode (same string used in SeedWithFee.s.sol)
+   cast rpc anvil_setCode 0x4e59b44847b379578588920cA78FbF26c0B4956C 0x07ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf3
 
-```bash
-pnpm seed:fee
-```
+   # factory runtime bytecode can be pulled from the compiled artifact
+   CODE=$(cd packages/contracts && forge inspect MerkleVestingFactory deployedBytecode)
+   cast rpc anvil_setCode 0x6B51bD91c3FF15e34C56D62F7c77892DE7bA3786 "$CODE"
+   ```
 
-Check `packages/contracts/seed-output/` for the printed JSON that includes the fee metadata and guarantees the indexer can see a non-zero fee campaign.
+3. Top up every account used by the script (`0xf39F...` plus `vm.addr(1..6)`) because `vm.deal` can't modify a remote node:
+
+   ```bash
+   for addr in \
+     0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 \
+     0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf \
+     0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF \
+     0x6813Eb9362372EEF6200f3b1dbC3f819671cBA69 \
+     0x1efF47bc3a10a45D4B230B5d10E37751FE6AA718 \
+     0xe1AB8145F7E55DC933d51a18c793F901A3A0b276 \
+     0xE57bFE9F44b819898F47BF37E5AF72a0783e1141; do
+     cast rpc anvil_setBalance "$addr" 0x8ac7230489e80000
+   done
+   ```
+
+4. Run the seeding script:
+
+   ```bash
+   pnpm seed:fee
+   ```
+
+   It prints JSON including the `platformFeeRecipient`/`platformFeeBps` values that the backend carries through proof packages.
+
+5. Clear the indexer's state and restart it so it can pick up the new events:
+
+   ```bash
+   rm -rf packages/indexer/.ponder
+   tmux new-session -d -s tally-indexer 'cd /Users/.../tally-vesting && pnpm indexer:dev'
+   ```
+
+6. Gate the GraphQL server (it picks the first open port, typically 42079–42082) and run a quick query to prove the factory row exists:
+
+   ```bash
+   curl -s -X POST http://localhost:42080 \
+     -H 'Content-Type: application/json' \
+     -d '{"query":"{ factorys { items { id address deployerCount totalValueLocked } } }"}'
+   ```
+
+   The response should include the deterministic factory (e.g., `31337_0x6b51...`) and `deployerCount: 1`. If you need a richer view, query `releases` to confirm `feeAmount`/`feeRecipient` are being stored.
+
+7. Once the indexer has processed the events, the `progress` table reports releases (e.g., `VestingWallet:ERC20Released` entries with fee metadata) and the GraphQL schema exposes those fields for dashboards and proofs.
