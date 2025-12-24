@@ -34,6 +34,16 @@
         "internalType": "uint64"
       },
       {
+        "name": "platformFeeRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "platformFeeBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
         "name": "salt",
         "type": "bytes32",
         "internalType": "bytes32"
@@ -81,6 +91,16 @@
         "name": "claimDeadline",
         "type": "uint64",
         "internalType": "uint64"
+      },
+      {
+        "name": "platformFeeRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "platformFeeBps",
+        "type": "uint16",
+        "internalType": "uint16"
       },
       {
         "name": "salt",
@@ -162,6 +182,11 @@
   {
     "type": "error",
     "name": "InvalidClaimDeadline",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidPlatformFee",
     "inputs": []
   },
   {

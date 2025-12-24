@@ -31,6 +31,10 @@ describe('IPFS Service', () => {
       vestingDuration: 31536000,
       cliffDuration: 7776000,
     },
+    platformFee: {
+      feeRecipient: '0x1234567890123456789012345678901234567890' as Hex,
+      feeBps: 250,
+    },
     buildSpec: {
       version: '1.0.0',
       leafEncoding: 'abi.encodePacked(address,uint256)',
@@ -52,6 +56,10 @@ describe('IPFS Service', () => {
         vestingStart: 1704067200,
         vestingDuration: 31536000,
         cliffDuration: 7776000,
+      },
+      platformFee: {
+        feeRecipient: '0x1234567890123456789012345678901234567890' as Hex,
+        feeBps: 250,
       },
     },
     inputHash: '0xcccc' as Hex,
@@ -95,6 +103,7 @@ describe('IPFS Service', () => {
         createdAt: mockTree.createdAt,
         token: mockTree.token,
         vesting: mockTree.vesting,
+        platformFee: mockTree.platformFee,
         originalInput: mockTree.originalInput,
         inputHash: mockTree.inputHash,
       };

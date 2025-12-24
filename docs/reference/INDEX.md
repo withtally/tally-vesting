@@ -13,6 +13,7 @@ Technical reference materials and specifications for the Tally Vesting project.
 | Date | Document | Status | Description |
 |------|----------|--------|-------------|
 | 2025-12-23 | [sweep-mechanism.md](./sweep-mechanism.md) | Active | Technical notes on sweep mechanism |
+| 2025-12-24 | [platform-fee.md](./platform-fee.md) | Active | Platform fee extension, wrapper, and tooling |
 
 ## Related Categories
 

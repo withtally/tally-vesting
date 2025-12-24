@@ -1,4 +1,4 @@
-import type { MerkleTree, Allocation, VestingParams } from '../types';
+import type { MerkleTree, Allocation, VestingParams, PlatformFeeParams } from '../types';
 import type { Hex } from 'viem';
 import { v4 as uuidv4 } from 'uuid';
 import { buildTree } from './merkle';
@@ -11,6 +11,7 @@ export interface RebuildInput {
   allocations: Allocation[];
   token?: Hex;
   vesting?: VestingParams;
+  platformFee?: PlatformFeeParams;
 }
 
 /**
@@ -29,13 +30,13 @@ export interface RebuildResult {
  * @returns Complete MerkleTree with buildSpec, originalInput, and inputHash
  */
 export function rebuildTree(input: RebuildInput): MerkleTree {
-  const { allocations, token, vesting } = input;
+  const { allocations, token, vesting, platformFee } = input;
 
   // Canonicalize allocations (normalize and sort)
   const canonicalAllocations = canonicalizeAllocations(allocations);
 
   // Compute input hash for deterministic verification
-  const inputHash = computeInputHash(canonicalAllocations, token, vesting);
+  const inputHash = computeInputHash(canonicalAllocations, token, vesting, platformFee);
 
   // Build the merkle tree with canonicalized allocations
   const { root, allocations: allocationsWithProof } = buildTree(canonicalAllocations);
@@ -48,11 +49,13 @@ export function rebuildTree(input: RebuildInput): MerkleTree {
     createdAt: new Date().toISOString(),
     allocations: allocationsWithProof,
     vesting,
+    platformFee,
     buildSpec: BUILD_SPEC,
     originalInput: {
       allocations,
       token,
       vesting,
+      platformFee,
     },
     inputHash,
   };
@@ -130,6 +133,7 @@ export function rebuildFromStoredInput(tree: MerkleTree): RebuildResult {
     allocations: tree.originalInput.allocations,
     token: tree.originalInput.token,
     vesting: tree.originalInput.vesting,
+    platformFee: tree.originalInput.platformFee,
   });
 
   // Verify the rebuild matches the original

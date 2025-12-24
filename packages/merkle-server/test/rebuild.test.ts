@@ -3,7 +3,7 @@ import { rebuildTree, verifyRebuild, rebuildFromStoredInput } from '../src/servi
 import { buildTree } from '../src/services/merkle';
 import { canonicalizeAllocations, computeInputHash, BUILD_SPEC } from '../src/services/canonicalize';
 import type { Hex } from 'viem';
-import type { MerkleTree, Allocation, VestingParams } from '../src/types';
+import type { MerkleTree, Allocation, VestingParams, PlatformFeeParams } from '../src/types';
 
 describe('Rebuild Service', () => {
   // Test data
@@ -26,6 +26,10 @@ describe('Rebuild Service', () => {
     vestingStart: 1000000,
     vestingDuration: 31536000, // 1 year
     cliffDuration: 7776000, // 90 days
+  };
+  const platformFee: PlatformFeeParams = {
+    feeRecipient: '0x2222222222222222222222222222222222222222' as Hex,
+    feeBps: 250,
   };
 
   describe('rebuildTree', () => {
@@ -117,12 +121,13 @@ describe('Rebuild Service', () => {
     });
 
     it('includes originalInput in rebuilt tree', () => {
-      const rebuilt = rebuildTree({ allocations, token, vesting: vestingParams });
+      const rebuilt = rebuildTree({ allocations, token, vesting: vestingParams, platformFee });
 
       expect(rebuilt.originalInput).toBeDefined();
       expect(rebuilt.originalInput.allocations).toEqual(allocations);
       expect(rebuilt.originalInput.token).toBe(token);
       expect(rebuilt.originalInput.vesting).toEqual(vestingParams);
+      expect(rebuilt.originalInput.platformFee).toEqual(platformFee);
     });
 
     it('stores token in rebuilt tree', () => {
@@ -147,6 +152,13 @@ describe('Rebuild Service', () => {
     it('computes different inputHash when vesting is included', () => {
       const tree1 = rebuildTree({ allocations });
       const tree2 = rebuildTree({ allocations, vesting: vestingParams });
+
+      expect(tree1.inputHash).not.toBe(tree2.inputHash);
+    });
+
+    it('computes different inputHash when platform fee is included', () => {
+      const tree1 = rebuildTree({ allocations });
+      const tree2 = rebuildTree({ allocations, platformFee });
 
       expect(tree1.inputHash).not.toBe(tree2.inputHash);
     });
@@ -218,12 +230,21 @@ describe('Rebuild Service', () => {
 
       expect(matches).toBe(false);
     });
+
+    it('returns true for trees with platform fee', () => {
+      const original = rebuildTree({ allocations, platformFee });
+      const rebuilt = rebuildTree({ allocations, platformFee });
+
+      const matches = verifyRebuild(original, rebuilt);
+
+      expect(matches).toBe(true);
+    });
   });
 
   describe('rebuildFromStoredInput', () => {
     it('rebuilds using stored originalInput from tree', () => {
       // Create an original tree with stored input
-      const originalTree = rebuildTree({ allocations, token, vesting: vestingParams });
+      const originalTree = rebuildTree({ allocations, token, vesting: vestingParams, platformFee });
 
       // Rebuild from stored input
       const result = rebuildFromStoredInput(originalTree);
@@ -285,6 +306,14 @@ describe('Rebuild Service', () => {
       const result = rebuildFromStoredInput(originalTree);
 
       expect(result.tree.vesting).toEqual(vestingParams);
+    });
+
+    it('preserves platform fee in rebuilt tree', () => {
+      const originalTree = rebuildTree({ allocations, platformFee });
+
+      const result = rebuildFromStoredInput(originalTree);
+
+      expect(result.tree.platformFee).toEqual(platformFee);
     });
   });
 });

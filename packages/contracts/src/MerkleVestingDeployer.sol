@@ -6,7 +6,7 @@ import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IMerkleVestingDeployer} from "./interfaces/IMerkleVestingDeployer.sol";
-import {VestingWalletCliffConcrete} from "./VestingWalletCliffConcrete.sol";
+import {VestingWalletFeeWrapper} from "./VestingWalletFeeWrapper.sol";
 
 /// @title MerkleVestingDeployer
 /// @notice Merkle-based vesting deployment using OpenZeppelin's VestingWalletCliff
@@ -34,6 +34,12 @@ contract MerkleVestingDeployer is IMerkleVestingDeployer {
     /// @inheritdoc IMerkleVestingDeployer
     uint64 public immutable claimDeadline;
 
+    /// @inheritdoc IMerkleVestingDeployer
+    address public immutable platformFeeRecipient;
+
+    /// @inheritdoc IMerkleVestingDeployer
+    uint16 public immutable platformFeeBps;
+
     // ============ Storage ============
 
     /// @dev Mapping of beneficiary => claimed status
@@ -47,13 +53,17 @@ contract MerkleVestingDeployer is IMerkleVestingDeployer {
         uint64 _vestingStart,
         uint64 _vestingDuration,
         uint64 _cliffDuration,
-        uint64 _claimDeadline
+        uint64 _claimDeadline,
+        address _platformFeeRecipient,
+        uint16 _platformFeeBps
     ) {
         if (_token == address(0)) revert ZeroAddress();
         if (_merkleRoot == bytes32(0)) revert ZeroMerkleRoot();
         if (_vestingDuration == 0) revert ZeroVestingDuration();
         if (_cliffDuration > _vestingDuration) revert CliffExceedsDuration();
         if (_claimDeadline < _vestingStart + _vestingDuration) revert InvalidClaimDeadline();
+        if (_platformFeeBps > 10_000) revert InvalidPlatformFee();
+        if (_platformFeeBps > 0 && _platformFeeRecipient == address(0)) revert InvalidPlatformFee();
 
         token = _token;
         merkleRoot = _merkleRoot;
@@ -61,6 +71,8 @@ contract MerkleVestingDeployer is IMerkleVestingDeployer {
         vestingDuration = _vestingDuration;
         cliffDuration = _cliffDuration;
         claimDeadline = _claimDeadline;
+        platformFeeRecipient = _platformFeeRecipient;
+        platformFeeBps = _platformFeeBps;
     }
 
     // ============ View Functions ============
@@ -129,16 +141,25 @@ contract MerkleVestingDeployer is IMerkleVestingDeployer {
         bytes memory bytecode = _getVestingWalletBytecode(beneficiary);
         wallet = Create2.deploy(0, salt, bytecode);
 
-        // Transfer tokens to the VestingWallet
-        IERC20(token).safeTransfer(wallet, amount);
+        // Transfer tokens to the underlying VestingWallet
+        address underlyingWallet = VestingWalletFeeWrapper(payable(wallet)).vestingWallet();
+        IERC20(token).safeTransfer(underlyingWallet, amount);
 
         emit VestingClaimed(beneficiary, wallet, amount);
     }
 
     function _getVestingWalletBytecode(address beneficiary) internal view returns (bytes memory) {
         return abi.encodePacked(
-            type(VestingWalletCliffConcrete).creationCode,
-            abi.encode(beneficiary, vestingStart, vestingDuration, cliffDuration)
+            type(VestingWalletFeeWrapper).creationCode,
+            abi.encode(
+                beneficiary,
+                token,
+                vestingStart,
+                vestingDuration,
+                cliffDuration,
+                platformFeeRecipient,
+                platformFeeBps
+            )
         );
     }
 

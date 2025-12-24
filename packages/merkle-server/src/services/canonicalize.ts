@@ -1,5 +1,5 @@
 import { keccak256, encodePacked, concatHex, type Hex } from 'viem';
-import type { Allocation, CanonicalAllocation, BuildSpec, VestingParams } from '../types';
+import type { Allocation, CanonicalAllocation, BuildSpec, VestingParams, PlatformFeeParams } from '../types';
 
 /**
  * The BuildSpec constant that defines how merkle trees are built
@@ -101,7 +101,8 @@ export function canonicalizeAllocations(allocations: Allocation[]): CanonicalAll
 export function computeInputHash(
   allocations: CanonicalAllocation[],
   token?: Hex,
-  vesting?: VestingParams
+  vesting?: VestingParams,
+  platformFee?: PlatformFeeParams
 ): Hex {
   // Start with empty hex
   let data: Hex = '0x';
@@ -127,6 +128,14 @@ export function computeInputHash(
         ['uint256', 'uint256', 'uint256'],
         [BigInt(vesting.vestingStart), BigInt(vesting.vestingDuration), BigInt(vesting.cliffDuration)]
       )
+    ]);
+  }
+
+  if (platformFee) {
+    data = concatHex([
+      data,
+      normalizeAddress(platformFee.feeRecipient),
+      encodePacked(['uint256'], [BigInt(platformFee.feeBps)])
     ]);
   }
 

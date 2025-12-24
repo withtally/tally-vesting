@@ -189,7 +189,7 @@ ponder.on("MerkleVestingFactory:DeployerCreated", async ({ event, context }) => 
   // ============================================================
   // 3. Read vesting parameters from deployer contract
   // ============================================================
-  const [vestingStart, vestingDuration, cliffDuration, claimDeadline] =
+  const [vestingStart, vestingDuration, cliffDuration, claimDeadline, platformFeeRecipient, platformFeeBps] =
     await Promise.all([
       client.readContract({
         address: deployerAddress,
@@ -210,6 +210,16 @@ ponder.on("MerkleVestingFactory:DeployerCreated", async ({ event, context }) => 
         address: deployerAddress,
         abi: MerkleVestingDeployerAbi,
         functionName: "claimDeadline",
+      }),
+      client.readContract({
+        address: deployerAddress,
+        abi: MerkleVestingDeployerAbi,
+        functionName: "platformFeeRecipient",
+      }),
+      client.readContract({
+        address: deployerAddress,
+        abi: MerkleVestingDeployerAbi,
+        functionName: "platformFeeBps",
       }),
     ]);
 
@@ -238,6 +248,8 @@ ponder.on("MerkleVestingFactory:DeployerCreated", async ({ event, context }) => 
     vestingDuration: BigInt(vestingDuration),
     cliffDuration: BigInt(cliffDuration),
     claimDeadline: BigInt(claimDeadline),
+    platformFeeRecipient,
+    platformFeeBps: Number(platformFeeBps),
     totalAllocation,
     totalClaimed: 0n,
     claimCount: 0,
@@ -349,6 +361,8 @@ ponder.on("MerkleVestingDeployer:VestingClaimed", async ({ event, context }) => 
     vestingStart: deployerEntity.vestingStart,
     vestingEnd: deployerEntity.vestingEnd,
     cliffEnd: deployerEntity.cliffEnd,
+    platformFeeRecipient: deployerEntity.platformFeeRecipient,
+    platformFeeBps: deployerEntity.platformFeeBps,
     createdAt: timestamp,
     createdAtBlock: blockNumber,
   });
@@ -401,7 +415,9 @@ ponder.on("MerkleVestingDeployer:VestingClaimed", async ({ event, context }) => 
  * Event signature:
  * event ERC20Released(
  *   address indexed token,
- *   uint256 amount
+ *   uint256 amount,
+ *   uint256 feeAmount,
+ *   address indexed feeRecipient
  * )
  *
  * Creates:
@@ -413,7 +429,7 @@ ponder.on("MerkleVestingDeployer:VestingClaimed", async ({ event, context }) => 
  * - Token stats (totalReleasedAmount)
  */
 ponder.on("VestingWallet:ERC20Released", async ({ event, context }) => {
-  const { token: tokenAddress, amount } = event.args;
+  const { token: tokenAddress, amount, feeAmount, feeRecipient } = event.args;
   const { db, network } = context;
 
   const chainId = network.chainId;
@@ -453,6 +469,8 @@ ponder.on("VestingWallet:ERC20Released", async ({ event, context }) => {
     beneficiaryId,
     tokenAddress,
     amount,
+    feeAmount,
+    feeRecipient,
     releasedAt: timestamp,
     blockNumber,
     txHash,
@@ -475,7 +493,7 @@ ponder.on("VestingWallet:ERC20Released", async ({ event, context }) => {
   await db
     .update(account, { id: beneficiaryId })
     .set((row) => ({
-      totalReleasedAmount: row.totalReleasedAmount + amount,
+      totalReleasedAmount: row.totalReleasedAmount + (amount - feeAmount),
       releaseCount: row.releaseCount + 1,
     }));
 

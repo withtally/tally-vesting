@@ -10,6 +10,14 @@ export interface VestingParams {
 }
 
 /**
+ * Optional platform fee configuration for a vesting campaign
+ */
+export interface PlatformFeeParams {
+  feeRecipient: Hex;
+  feeBps: number; // 0-10,000
+}
+
+/**
  * Input allocation for creating a merkle tree
  */
 export interface Allocation {
@@ -57,11 +65,13 @@ export interface MerkleTree {
   createdAt: string;
   allocations: AllocationWithProof[];
   vesting?: VestingParams; // Optional vesting schedule
+  platformFee?: PlatformFeeParams;
   buildSpec: BuildSpec;
   originalInput: {
     allocations: Allocation[];
     token?: Hex;
     vesting?: VestingParams;
+    platformFee?: PlatformFeeParams;
   };
   inputHash: Hex;
 }
@@ -85,6 +95,7 @@ export interface CreateTreeRequest {
   allocations: Allocation[];
   token?: Hex;
   vesting?: VestingParams;
+  platformFee?: PlatformFeeParams;
 }
 
 /**
@@ -154,6 +165,7 @@ export interface ProofPackage {
   leaf: Hex;
   proof: Hex[];
   vesting?: VestingParams;
+  platformFee?: PlatformFeeParams;
   contract?: {
     chainId: number;
     deployerAddress: Hex;
@@ -177,6 +189,7 @@ export interface BatchProofPackage {
     proof: Hex[];
   }>;
   vesting?: VestingParams;
+  platformFee?: PlatformFeeParams;
   contract?: {
     chainId: number;
     deployerAddress: Hex;

@@ -42,6 +42,10 @@ export function generateProofPackage(
     pkg.vesting = tree.vesting;
   }
 
+  if (tree.platformFee) {
+    pkg.platformFee = tree.platformFee;
+  }
+
   if (contractInfo) {
     pkg.contract = contractInfo;
   }
@@ -73,6 +77,10 @@ export function generateBatchProofPackage(
   // Add optional fields
   if (tree.vesting) {
     pkg.vesting = tree.vesting;
+  }
+
+  if (tree.platformFee) {
+    pkg.platformFee = tree.platformFee;
   }
 
   if (contractInfo) {

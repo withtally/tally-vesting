@@ -54,6 +54,9 @@ interface IMerkleVestingDeployer {
     /// @notice Thrown when there are no tokens to sweep
     error NothingToSweep();
 
+    /// @notice Thrown when platform fee configuration is invalid
+    error InvalidPlatformFee();
+
     // ============ View Functions ============
 
     /// @notice The ERC20 token being vested
@@ -73,6 +76,12 @@ interface IMerkleVestingDeployer {
 
     /// @notice Deadline for claiming (Unix timestamp). After this, unclaimed tokens can be swept.
     function claimDeadline() external view returns (uint64);
+
+    /// @notice Platform fee recipient (zero when fee disabled)
+    function platformFeeRecipient() external view returns (address);
+
+    /// @notice Platform fee in basis points (0-10,000)
+    function platformFeeBps() external view returns (uint16);
 
     /// @notice Check if a beneficiary has already claimed
     /// @param beneficiary The address to check
@@ -95,7 +104,7 @@ interface IMerkleVestingDeployer {
     // ============ State-Changing Functions ============
 
     /// @notice Claim vesting allocation for msg.sender
-    /// @dev Deploys a VestingWalletCliff via CREATE2 and funds it
+    /// @dev Deploys a VestingWalletFeeWrapper via CREATE2 and funds its underlying vesting wallet
     /// @param proof The merkle proof for the claim
     /// @param amount The token amount being claimed (must match leaf)
     /// @return wallet The deployed VestingWallet address

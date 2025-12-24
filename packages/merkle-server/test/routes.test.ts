@@ -14,6 +14,10 @@ const token = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' as Hex;
 const aliceAmount = '1000000000000000000000';
 const bobAmount = '2000000000000000000000';
 const carolAmount = '500000000000000000000';
+const platformFee = {
+  feeRecipient: '0x1234567890123456789012345678901234567890' as Hex,
+  feeBps: 250,
+};
 
 describe('API Routes', () => {
   beforeEach(async () => {
@@ -99,6 +103,23 @@ describe('API Routes', () => {
 
       const body = await res.json();
       expect(body.token).toBe(token);
+    });
+
+    it('creates a tree with optional platform fee', async () => {
+      const res = await app.request('/trees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          allocations: [{ beneficiary: alice, amount: aliceAmount }],
+          platformFee,
+        }),
+      });
+
+      expect(res.status).toBe(201);
+
+      const body = await res.json();
+      expect(body.platformFee).toEqual(platformFee);
+      expect(body.originalInput.platformFee).toEqual(platformFee);
     });
 
     it('includes leaf and proof for each allocation', async () => {
@@ -222,6 +243,38 @@ describe('API Routes', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           allocations: [{ beneficiary: alice, amount: 'not-a-number' }],
+        }),
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects platform fee without recipient', async () => {
+      const res = await app.request('/trees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          allocations: [{ beneficiary: alice, amount: aliceAmount }],
+          platformFee: {
+            feeRecipient: '0x0000000000000000000000000000000000000000',
+            feeBps: 1,
+          },
+        }),
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects platform fee above 10000 bps', async () => {
+      const res = await app.request('/trees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          allocations: [{ beneficiary: alice, amount: aliceAmount }],
+          platformFee: {
+            feeRecipient: platformFee.feeRecipient,
+            feeBps: 10001,
+          },
         }),
       });
 
@@ -676,6 +729,7 @@ describe('API Routes', () => {
             { beneficiary: bob, amount: bobAmount },
           ],
           token,
+          platformFee,
         }),
       });
       const created = await createRes.json();
@@ -686,6 +740,7 @@ describe('API Routes', () => {
       const body = await res.json();
       expect(body.allocations).toHaveLength(2);
       expect(body.token).toBe(token);
+      expect(body.platformFee).toEqual(platformFee);
       expect(body.inputHash).toBe(created.inputHash);
       expect(body.buildSpec).toBeDefined();
     });

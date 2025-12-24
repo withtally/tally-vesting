@@ -63,6 +63,8 @@ type deployer {
   vestingDuration: BigInt!
   cliffDuration: BigInt!
   claimDeadline: BigInt!
+  platformFeeRecipient: String!
+  platformFeeBps: Int!
   totalAllocation: BigInt!
   totalClaimed: BigInt!
   claimCount: Int!
@@ -195,6 +197,24 @@ input deployerFilter {
   claimDeadline_lt: BigInt
   claimDeadline_gte: BigInt
   claimDeadline_lte: BigInt
+  platformFeeRecipient: String
+  platformFeeRecipient_not: String
+  platformFeeRecipient_in: [String]
+  platformFeeRecipient_not_in: [String]
+  platformFeeRecipient_contains: String
+  platformFeeRecipient_not_contains: String
+  platformFeeRecipient_starts_with: String
+  platformFeeRecipient_ends_with: String
+  platformFeeRecipient_not_starts_with: String
+  platformFeeRecipient_not_ends_with: String
+  platformFeeBps: Int
+  platformFeeBps_not: Int
+  platformFeeBps_in: [Int]
+  platformFeeBps_not_in: [Int]
+  platformFeeBps_gt: Int
+  platformFeeBps_lt: Int
+  platformFeeBps_gte: Int
+  platformFeeBps_lte: Int
   totalAllocation: BigInt
   totalAllocation_not: BigInt
   totalAllocation_in: [BigInt]
@@ -277,6 +297,8 @@ type release {
   beneficiaryId: String!
   tokenAddress: String!
   amount: BigInt!
+  feeAmount: BigInt!
+  feeRecipient: String!
   releasedAt: Int!
   blockNumber: BigInt!
   txHash: String!
@@ -301,6 +323,8 @@ type vestingWallet {
   vestingStart: BigInt!
   vestingEnd: BigInt!
   cliffEnd: BigInt!
+  platformFeeRecipient: String!
+  platformFeeBps: Int!
   createdAt: Int!
   createdAtBlock: BigInt!
   deployer: deployer
@@ -461,6 +485,24 @@ input vestingWalletFilter {
   cliffEnd_lt: BigInt
   cliffEnd_gte: BigInt
   cliffEnd_lte: BigInt
+  platformFeeRecipient: String
+  platformFeeRecipient_not: String
+  platformFeeRecipient_in: [String]
+  platformFeeRecipient_not_in: [String]
+  platformFeeRecipient_contains: String
+  platformFeeRecipient_not_contains: String
+  platformFeeRecipient_starts_with: String
+  platformFeeRecipient_ends_with: String
+  platformFeeRecipient_not_starts_with: String
+  platformFeeRecipient_not_ends_with: String
+  platformFeeBps: Int
+  platformFeeBps_not: Int
+  platformFeeBps_in: [Int]
+  platformFeeBps_not_in: [Int]
+  platformFeeBps_gt: Int
+  platformFeeBps_lt: Int
+  platformFeeBps_gte: Int
+  platformFeeBps_lte: Int
   createdAt: Int
   createdAt_not: Int
   createdAt_in: [Int]
@@ -687,6 +729,24 @@ input releaseFilter {
   amount_lt: BigInt
   amount_gte: BigInt
   amount_lte: BigInt
+  feeAmount: BigInt
+  feeAmount_not: BigInt
+  feeAmount_in: [BigInt]
+  feeAmount_not_in: [BigInt]
+  feeAmount_gt: BigInt
+  feeAmount_lt: BigInt
+  feeAmount_gte: BigInt
+  feeAmount_lte: BigInt
+  feeRecipient: String
+  feeRecipient_not: String
+  feeRecipient_in: [String]
+  feeRecipient_not_in: [String]
+  feeRecipient_contains: String
+  feeRecipient_not_contains: String
+  feeRecipient_starts_with: String
+  feeRecipient_ends_with: String
+  feeRecipient_not_starts_with: String
+  feeRecipient_not_ends_with: String
   releasedAt: Int
   releasedAt_not: Int
   releasedAt_in: [Int]

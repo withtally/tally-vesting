@@ -242,6 +242,21 @@ describe('Canonicalization Service', () => {
       expect(hash1).not.toBe(hash2);
     });
 
+    it('produces different hash when platform fee is included', () => {
+      const allocations = [
+        { beneficiary: alice, amount: '1000' },
+      ];
+      const platformFee = {
+        feeRecipient: '0x2222222222222222222222222222222222222222' as Hex,
+        feeBps: 250,
+      };
+
+      const hash1 = computeInputHash(allocations);
+      const hash2 = computeInputHash(allocations, undefined, undefined, platformFee);
+
+      expect(hash1).not.toBe(hash2);
+    });
+
     it('produces same hash with same token and vesting params', () => {
       const allocations = [
         { beneficiary: alice, amount: '1000' },
@@ -255,6 +270,21 @@ describe('Canonicalization Service', () => {
 
       const hash1 = computeInputHash(allocations, token, vesting);
       const hash2 = computeInputHash(allocations, token, vesting);
+
+      expect(hash1).toBe(hash2);
+    });
+
+    it('produces same hash with same platform fee', () => {
+      const allocations = [
+        { beneficiary: alice, amount: '1000' },
+      ];
+      const platformFee = {
+        feeRecipient: '0x2222222222222222222222222222222222222222' as Hex,
+        feeBps: 250,
+      };
+
+      const hash1 = computeInputHash(allocations, undefined, undefined, platformFee);
+      const hash2 = computeInputHash(allocations, undefined, undefined, platformFee);
 
       expect(hash1).toBe(hash2);
     });

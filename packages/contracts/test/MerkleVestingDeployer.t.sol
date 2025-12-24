@@ -6,7 +6,7 @@ import {IMerkleVestingDeployer} from "../src/interfaces/IMerkleVestingDeployer.s
 import {MerkleVestingDeployer} from "../src/MerkleVestingDeployer.sol";
 import {MerkleTreeHelper} from "./helpers/MerkleTreeHelper.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {VestingWallet} from "@openzeppelin/contracts/finance/VestingWallet.sol";
+import {VestingWalletFeeWrapper} from "../src/VestingWalletFeeWrapper.sol";
 
 /// @notice Mock ERC20 for testing
 contract MockERC20 is ERC20 {
@@ -31,6 +31,7 @@ contract MerkleVestingDeployerTest is Test {
     address public bob = makeAddr("bob");
     address public carol = makeAddr("carol");
     address public treasury = makeAddr("treasury");
+    address public platformFeeRecipient = makeAddr("platformFeeRecipient");
 
     uint256 public constant ALICE_AMOUNT = 1000 ether;
     uint256 public constant BOB_AMOUNT = 2000 ether;
@@ -46,6 +47,8 @@ contract MerkleVestingDeployerTest is Test {
     // Merkle data
     bytes32 public merkleRoot;
     bytes32[] public leaves;
+
+    uint16 public platformFeeBps;
 
     function setUp() public {
         // Deploy mock token
@@ -64,8 +67,16 @@ contract MerkleVestingDeployerTest is Test {
         (merkleRoot, leaves) = allocations.buildTree();
 
         // Deploy MerkleVestingDeployer and fund it
+        platformFeeBps = 0;
         deployer = new MerkleVestingDeployer(
-            address(token), merkleRoot, vestingStart, VESTING_DURATION, CLIFF_DURATION, claimDeadline
+            address(token),
+            merkleRoot,
+            vestingStart,
+            VESTING_DURATION,
+            CLIFF_DURATION,
+            claimDeadline,
+            address(0),
+            platformFeeBps
         );
         token.mint(address(deployer), TOTAL_ALLOCATION);
     }
@@ -75,19 +86,35 @@ contract MerkleVestingDeployerTest is Test {
     function test_constructorRevertsOnZeroMerkleRoot() public {
         vm.expectRevert(IMerkleVestingDeployer.ZeroMerkleRoot.selector);
         new MerkleVestingDeployer(
-            address(token), bytes32(0), vestingStart, VESTING_DURATION, CLIFF_DURATION, claimDeadline
+            address(token),
+            bytes32(0),
+            vestingStart,
+            VESTING_DURATION,
+            CLIFF_DURATION,
+            claimDeadline,
+            address(0),
+            0
         );
     }
 
     function test_constructorRevertsOnZeroVestingDuration() public {
         vm.expectRevert(IMerkleVestingDeployer.ZeroVestingDuration.selector);
-        new MerkleVestingDeployer(address(token), merkleRoot, vestingStart, 0, CLIFF_DURATION, claimDeadline);
+        new MerkleVestingDeployer(
+            address(token), merkleRoot, vestingStart, 0, CLIFF_DURATION, claimDeadline, address(0), 0
+        );
     }
 
     function test_constructorRevertsOnCliffExceedsDuration() public {
         vm.expectRevert(IMerkleVestingDeployer.CliffExceedsDuration.selector);
         new MerkleVestingDeployer(
-            address(token), merkleRoot, vestingStart, VESTING_DURATION, VESTING_DURATION + 1, claimDeadline
+            address(token),
+            merkleRoot,
+            vestingStart,
+            VESTING_DURATION,
+            VESTING_DURATION + 1,
+            claimDeadline,
+            address(0),
+            0
         );
     }
 
@@ -97,7 +124,21 @@ contract MerkleVestingDeployerTest is Test {
 
         vm.expectRevert(IMerkleVestingDeployer.InvalidClaimDeadline.selector);
         new MerkleVestingDeployer(
-            address(token), merkleRoot, vestingStart, VESTING_DURATION, CLIFF_DURATION, invalidDeadline
+            address(token), merkleRoot, vestingStart, VESTING_DURATION, CLIFF_DURATION, invalidDeadline, address(0), 0
+        );
+    }
+
+    function test_constructorRevertsOnInvalidPlatformFee() public {
+        vm.expectRevert(IMerkleVestingDeployer.InvalidPlatformFee.selector);
+        new MerkleVestingDeployer(
+            address(token),
+            merkleRoot,
+            vestingStart,
+            VESTING_DURATION,
+            CLIFF_DURATION,
+            claimDeadline,
+            address(0),
+            1
         );
     }
 
@@ -240,7 +281,7 @@ contract MerkleVestingDeployerTest is Test {
         address wallet = deployer.claim(proof, ALICE_AMOUNT);
 
         // Check wallet has tokens
-        assertEq(token.balanceOf(wallet), ALICE_AMOUNT);
+        assertEq(token.balanceOf(VestingWalletFeeWrapper(payable(wallet)).vestingWallet()), ALICE_AMOUNT);
 
         // Nothing vested before cliff
         vm.warp(vestingStart + CLIFF_DURATION - 1);
@@ -296,7 +337,7 @@ contract MerkleVestingDeployerTest is Test {
         address wallet = deployer.claim(proof, ALICE_AMOUNT);
 
         vm.warp(timestamp);
-        uint256 vested = VestingWallet(payable(wallet)).vestedAmount(address(token), timestamp);
+        uint256 vested = VestingWalletFeeWrapper(payable(wallet)).vestedAmount(address(token), timestamp);
 
         if (timestamp < vestingStart + CLIFF_DURATION) {
             assertEq(vested, 0, "Should be 0 before cliff");
@@ -329,5 +370,29 @@ contract MerkleVestingDeployerTest is Test {
         vm.prank(alice);
         vm.expectRevert(IMerkleVestingDeployer.InvalidProof.selector);
         deployer.claim(proof, ALICE_AMOUNT);
+    }
+
+    function test_claimDeploysWrapperWithFeeConfig() public {
+        uint16 feeBps = 250;
+        MerkleVestingDeployer feeDeployer = new MerkleVestingDeployer(
+            address(token),
+            merkleRoot,
+            vestingStart,
+            VESTING_DURATION,
+            CLIFF_DURATION,
+            claimDeadline,
+            platformFeeRecipient,
+            feeBps
+        );
+        token.mint(address(feeDeployer), TOTAL_ALLOCATION);
+
+        bytes32[] memory proof = MerkleTreeHelper.getProof(leaves, 0);
+        vm.prank(alice);
+        address wallet = feeDeployer.claim(proof, ALICE_AMOUNT);
+
+        VestingWalletFeeWrapper wrapper = VestingWalletFeeWrapper(payable(wallet));
+        assertEq(wrapper.platformFeeRecipient(), platformFeeRecipient);
+        assertEq(wrapper.platformFeeBps(), feeBps);
+        assertEq(wrapper.beneficiary(), alice);
     }
 }

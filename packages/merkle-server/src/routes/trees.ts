@@ -23,6 +23,7 @@ const addressSchema = z.string().regex(/^0x[a-fA-F0-9]{40}$/, 'Invalid address')
 const uint256Schema = z.string()
   .regex(/^\d+$/, 'Invalid uint256 string')
   .max(MAX_UINT256_DIGITS, `Amount exceeds max ${MAX_UINT256_DIGITS} digits`);
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 const allocationSchema = z.object({
   beneficiary: addressSchema,
@@ -37,12 +38,20 @@ const vestingSchema = z.object({
   message: 'cliffDuration cannot exceed vestingDuration',
 });
 
+const platformFeeSchema = z.object({
+  feeRecipient: addressSchema,
+  feeBps: z.number().int().min(0, 'feeBps must be non-negative').max(10_000, 'feeBps cannot exceed 10000'),
+}).refine((data) => data.feeBps === 0 || data.feeRecipient !== ZERO_ADDRESS, {
+  message: 'feeRecipient is required when feeBps is greater than 0',
+});
+
 const createTreeRequestSchema = z.object({
   allocations: z.array(allocationSchema)
     .min(1, 'At least one allocation required')
     .max(MAX_ALLOCATIONS, `Maximum ${MAX_ALLOCATIONS} allocations allowed`),
   token: addressSchema.optional(),
   vesting: vestingSchema.optional(),
+  platformFee: platformFeeSchema.optional(),
 });
 
 /**
@@ -74,7 +83,8 @@ trees.post('/', async (c) => {
     const inputHash = computeInputHash(
       canonicalAllocations,
       request.token as Hex | undefined,
-      request.vesting
+      request.vesting,
+      request.platformFee
     );
 
     // Build the merkle tree with canonicalized allocations
@@ -88,11 +98,13 @@ trees.post('/', async (c) => {
       createdAt: new Date().toISOString(),
       allocations,
       vesting: request.vesting,
+      platformFee: request.platformFee,
       buildSpec: BUILD_SPEC,
       originalInput: {
         allocations: request.allocations,
         token: request.token as Hex | undefined,
         vesting: request.vesting,
+        platformFee: request.platformFee,
       },
       inputHash,
     };
@@ -253,6 +265,7 @@ trees.post('/rebuild-from-input', async (c) => {
       allocations: request.allocations,
       token: request.token as Hex | undefined,
       vesting: request.vesting,
+      platformFee: request.platformFee,
     });
 
     return c.json(rebuilt);
@@ -282,6 +295,7 @@ trees.get('/:id/input', async (c) => {
     allocations: tree.originalInput.allocations,
     token: tree.originalInput.token,
     vesting: tree.originalInput.vesting,
+    platformFee: tree.originalInput.platformFee,
     inputHash: tree.inputHash,
     buildSpec: tree.buildSpec,
   });

@@ -12,6 +12,7 @@
     "clean": "forge clean && rm -rf cache out",
     "anvil": "./script/anvil.sh",
     "seed": "./script/seed.sh",
+    "seed:fee": "./script/seed-fee.sh",
     "dev": "./script/dev.sh",
     "generate:abi": "forge build && node scripts/export-abi.mjs"
   },

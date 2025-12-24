@@ -31,6 +31,16 @@
         "name": "_claimDeadline",
         "type": "uint64",
         "internalType": "uint64"
+      },
+      {
+        "name": "_platformFeeRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_platformFeeBps",
+        "type": "uint16",
+        "internalType": "uint16"
       }
     ],
     "stateMutability": "nonpayable"
@@ -161,6 +171,32 @@
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "platformFeeBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "platformFeeRecipient",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -339,6 +375,11 @@
   {
     "type": "error",
     "name": "InvalidClaimDeadline",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidPlatformFee",
     "inputs": []
   },
   {

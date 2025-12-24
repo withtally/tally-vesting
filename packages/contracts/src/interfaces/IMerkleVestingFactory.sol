@@ -31,6 +31,9 @@ interface IMerkleVestingFactory {
     /// @notice Thrown when claim deadline is before vesting ends
     error InvalidClaimDeadline();
 
+    /// @notice Thrown when platform fee configuration is invalid
+    error InvalidPlatformFee();
+
     // ============ View Functions ============
 
     /// @notice Compute the deterministic address of a MerkleVestingDeployer
@@ -40,6 +43,8 @@ interface IMerkleVestingFactory {
     /// @param vestingDuration Total vesting duration
     /// @param cliffDuration Cliff period
     /// @param claimDeadline Deadline for claiming
+    /// @param platformFeeRecipient Address receiving platform fees (zero when disabled)
+    /// @param platformFeeBps Platform fee in basis points (0-10,000)
     /// @param salt Additional salt for uniqueness
     /// @return The address where the deployer will be created
     function getDeployerAddress(
@@ -49,6 +54,8 @@ interface IMerkleVestingFactory {
         uint64 vestingDuration,
         uint64 cliffDuration,
         uint64 claimDeadline,
+        address platformFeeRecipient,
+        uint16 platformFeeBps,
         bytes32 salt
     ) external view returns (address);
 
@@ -62,6 +69,8 @@ interface IMerkleVestingFactory {
     /// @param vestingDuration Total vesting duration in seconds
     /// @param cliffDuration Cliff period in seconds
     /// @param claimDeadline Deadline for claiming (Unix timestamp)
+    /// @param platformFeeRecipient Address receiving platform fees (zero when disabled)
+    /// @param platformFeeBps Platform fee in basis points (0-10,000)
     /// @param salt Additional salt for CREATE2 uniqueness
     /// @return deployer The deployed MerkleVestingDeployer address
     function deploy(
@@ -71,6 +80,8 @@ interface IMerkleVestingFactory {
         uint64 vestingDuration,
         uint64 cliffDuration,
         uint64 claimDeadline,
+        address platformFeeRecipient,
+        uint16 platformFeeBps,
         bytes32 salt
     ) external returns (address deployer);
 }

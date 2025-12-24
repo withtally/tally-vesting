@@ -33,6 +33,10 @@ const merkleTreeSchema = z.object({
     vestingDuration: z.number().int().positive(),
     cliffDuration: z.number().int().min(0),
   }).optional(),
+  platformFee: z.object({
+    feeRecipient: addressSchema,
+    feeBps: z.number().int().min(0).max(10_000),
+  }).optional(),
   buildSpec: z.object({
     version: z.string(),
     leafEncoding: z.string(),
@@ -52,6 +56,10 @@ const merkleTreeSchema = z.object({
       vestingStart: z.number(),
       vestingDuration: z.number(),
       cliffDuration: z.number(),
+    }).optional(),
+    platformFee: z.object({
+      feeRecipient: addressSchema,
+      feeBps: z.number().int().min(0).max(10_000),
     }).optional(),
   }),
   inputHash: hexSchema,

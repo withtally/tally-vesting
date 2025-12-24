@@ -19,15 +19,28 @@ contract MerkleVestingFactory is IMerkleVestingFactory {
         uint64 vestingDuration,
         uint64 cliffDuration,
         uint64 claimDeadline,
+        address platformFeeRecipient,
+        uint16 platformFeeBps,
         bytes32 salt
     ) public view returns (address) {
         // Compute the full salt including all parameters
         bytes32 fullSalt =
-            _computeSalt(token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt);
+            _computeSalt(
+                token,
+                merkleRoot,
+                vestingStart,
+                vestingDuration,
+                cliffDuration,
+                claimDeadline,
+                platformFeeRecipient,
+                platformFeeBps,
+                salt
+            );
 
         // Get the creation bytecode
-        bytes memory bytecode =
-            _getDeployerBytecode(token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline);
+        bytes memory bytecode = _getDeployerBytecode(
+            token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, platformFeeRecipient, platformFeeBps
+        );
 
         // Compute CREATE2 address
         return Create2.computeAddress(fullSalt, keccak256(bytecode));
@@ -43,6 +56,8 @@ contract MerkleVestingFactory is IMerkleVestingFactory {
         uint64 vestingDuration,
         uint64 cliffDuration,
         uint64 claimDeadline,
+        address platformFeeRecipient,
+        uint16 platformFeeBps,
         bytes32 salt
     ) external returns (address deployer) {
         // Validate inputs
@@ -50,6 +65,8 @@ contract MerkleVestingFactory is IMerkleVestingFactory {
         if (merkleRoot == bytes32(0)) revert ZeroMerkleRoot();
         if (vestingDuration == 0) revert ZeroVestingDuration();
         if (cliffDuration > vestingDuration) revert CliffExceedsDuration();
+        if (platformFeeBps > 10_000) revert InvalidPlatformFee();
+        if (platformFeeBps > 0 && platformFeeRecipient == address(0)) revert InvalidPlatformFee();
 
         // Calculate vesting end timestamp
         uint64 vestingEnd = vestingStart + vestingDuration;
@@ -57,11 +74,22 @@ contract MerkleVestingFactory is IMerkleVestingFactory {
 
         // Compute the full salt including all parameters
         bytes32 fullSalt =
-            _computeSalt(token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt);
+            _computeSalt(
+                token,
+                merkleRoot,
+                vestingStart,
+                vestingDuration,
+                cliffDuration,
+                claimDeadline,
+                platformFeeRecipient,
+                platformFeeBps,
+                salt
+            );
 
         // Get the creation bytecode
-        bytes memory bytecode =
-            _getDeployerBytecode(token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline);
+        bytes memory bytecode = _getDeployerBytecode(
+            token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, platformFeeRecipient, platformFeeBps
+        );
 
         // Deploy via CREATE2
         deployer = Create2.deploy(0, fullSalt, bytecode);
@@ -80,10 +108,22 @@ contract MerkleVestingFactory is IMerkleVestingFactory {
         uint64 vestingDuration,
         uint64 cliffDuration,
         uint64 claimDeadline,
+        address platformFeeRecipient,
+        uint16 platformFeeBps,
         bytes32 salt
     ) internal pure returns (bytes32) {
         return keccak256(
-            abi.encodePacked(token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt)
+            abi.encodePacked(
+                token,
+                merkleRoot,
+                vestingStart,
+                vestingDuration,
+                cliffDuration,
+                claimDeadline,
+                platformFeeRecipient,
+                platformFeeBps,
+                salt
+            )
         );
     }
 
@@ -94,11 +134,22 @@ contract MerkleVestingFactory is IMerkleVestingFactory {
         uint64 vestingStart,
         uint64 vestingDuration,
         uint64 cliffDuration,
-        uint64 claimDeadline
+        uint64 claimDeadline,
+        address platformFeeRecipient,
+        uint16 platformFeeBps
     ) internal pure returns (bytes memory) {
         return abi.encodePacked(
             type(MerkleVestingDeployer).creationCode,
-            abi.encode(token, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline)
+            abi.encode(
+                token,
+                merkleRoot,
+                vestingStart,
+                vestingDuration,
+                cliffDuration,
+                claimDeadline,
+                platformFeeRecipient,
+                platformFeeBps
+            )
         );
     }
 }

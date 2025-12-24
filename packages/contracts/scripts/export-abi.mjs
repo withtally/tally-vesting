@@ -7,7 +7,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CONTRACTS = [
   'MerkleVestingFactory',
   'MerkleVestingDeployer',
-  'VestingWalletCliffConcrete'
+  'VestingWalletCliffConcrete',
+  'VestingWalletFeeWrapper'
 ];
 
 const OUT_DIR = path.join(__dirname, '..', 'out');

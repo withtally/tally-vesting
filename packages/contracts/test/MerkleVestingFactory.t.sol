@@ -35,6 +35,8 @@ contract MerkleVestingFactoryTest is Test {
     uint64 public cliffDuration = 90 days;
     uint64 public claimDeadline = uint64(block.timestamp + 400 days);
     bytes32 public salt = bytes32(uint256(42));
+    address public feeRecipient = address(0xFEE);
+    uint16 public feeBps = 250;
 
     event DeployerCreated(address indexed deployer, address indexed token, bytes32 indexed merkleRoot, address creator);
 
@@ -47,7 +49,15 @@ contract MerkleVestingFactoryTest is Test {
 
     function test_deployCreatesDeployer() public {
         address deployer = factory.deploy(
-            address(token), merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
         );
 
         // Should return non-zero address
@@ -68,12 +78,28 @@ contract MerkleVestingFactoryTest is Test {
     function test_deployAddressIsDeterministic() public {
         // Pre-compute address
         address predictedAddress = factory.getDeployerAddress(
-            address(token), merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
         );
 
         // Deploy
         address actualAddress = factory.deploy(
-            address(token), merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
         );
 
         // Addresses should match
@@ -82,23 +108,59 @@ contract MerkleVestingFactoryTest is Test {
 
     function test_deployWithSameSaltRevertsOnSecondCall() public {
         // First deployment succeeds
-        factory.deploy(address(token), merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt);
+        factory.deploy(
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
+        );
 
         // Second deployment with same parameters should revert
         vm.expectRevert();
-        factory.deploy(address(token), merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt);
+        factory.deploy(
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
+        );
     }
 
     function test_deployWithDifferentSaltSucceeds() public {
         // First deployment
         address deployer1 = factory.deploy(
-            address(token), merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
         );
 
         // Second deployment with different salt
         bytes32 salt2 = bytes32(uint256(43));
         address deployer2 = factory.deploy(
-            address(token), merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt2
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt2
         );
 
         // Should be different addresses
@@ -108,13 +170,29 @@ contract MerkleVestingFactoryTest is Test {
     function test_deployWithDifferentParametersAndSameSaltSucceeds() public {
         // First deployment
         address deployer1 = factory.deploy(
-            address(token), merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
         );
 
         // Second deployment with different merkle root but same salt
         bytes32 merkleRoot2 = bytes32(uint256(2));
         address deployer2 = factory.deploy(
-            address(token), merkleRoot2, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt
+            address(token),
+            merkleRoot2,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
         );
 
         // Should be different addresses (because salt includes merkleRoot)
@@ -125,36 +203,110 @@ contract MerkleVestingFactoryTest is Test {
 
     function test_deployRevertsOnZeroTokenAddress() public {
         vm.expectRevert(IMerkleVestingFactory.ZeroAddress.selector);
-        factory.deploy(address(0), merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt);
+        factory.deploy(
+            address(0),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
+        );
     }
 
     function test_deployRevertsOnZeroMerkleRoot() public {
         vm.expectRevert(IMerkleVestingFactory.ZeroMerkleRoot.selector);
-        factory.deploy(address(token), bytes32(0), vestingStart, vestingDuration, cliffDuration, claimDeadline, salt);
+        factory.deploy(
+            address(token),
+            bytes32(0),
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
+        );
     }
 
     function test_deployRevertsOnZeroVestingDuration() public {
         vm.expectRevert(IMerkleVestingFactory.ZeroVestingDuration.selector);
-        factory.deploy(address(token), merkleRoot, vestingStart, 0, cliffDuration, claimDeadline, salt);
+        factory.deploy(
+            address(token),
+            merkleRoot,
+            vestingStart,
+            0,
+            cliffDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
+        );
     }
 
     function test_deployRevertsOnCliffExceedsDuration() public {
         uint64 invalidCliff = vestingDuration + 1;
         vm.expectRevert(IMerkleVestingFactory.CliffExceedsDuration.selector);
-        factory.deploy(address(token), merkleRoot, vestingStart, vestingDuration, invalidCliff, claimDeadline, salt);
+        factory.deploy(
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            invalidCliff,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
+        );
     }
 
     function test_deployRevertsOnClaimDeadlineBeforeVestingEnds() public {
         uint64 vestingEnd = vestingStart + vestingDuration;
         uint64 invalidDeadline = vestingEnd - 1;
         vm.expectRevert(IMerkleVestingFactory.InvalidClaimDeadline.selector);
-        factory.deploy(address(token), merkleRoot, vestingStart, vestingDuration, cliffDuration, invalidDeadline, salt);
+        factory.deploy(
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            invalidDeadline,
+            feeRecipient,
+            feeBps,
+            salt
+        );
+    }
+
+    function test_deployRevertsOnInvalidPlatformFee() public {
+        vm.expectRevert(IMerkleVestingFactory.InvalidPlatformFee.selector);
+        factory.deploy(
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            address(0),
+            1,
+            salt
+        );
     }
 
     function test_deployAllowsClaimDeadlineEqualToVestingEnd() public {
         uint64 vestingEnd = vestingStart + vestingDuration;
-        address deployer =
-            factory.deploy(address(token), merkleRoot, vestingStart, vestingDuration, cliffDuration, vestingEnd, salt);
+        address deployer = factory.deploy(
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            vestingEnd,
+            feeRecipient,
+            feeBps,
+            salt
+        );
         assertTrue(deployer != address(0), "Should allow claim deadline equal to vesting end");
     }
 
@@ -165,33 +317,68 @@ contract MerkleVestingFactoryTest is Test {
 
         // Pre-compute the deployer address for the event
         address expectedDeployer = factory.getDeployerAddress(
-            address(token), merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
         );
 
         emit DeployerCreated(expectedDeployer, address(token), merkleRoot, address(this));
 
-        factory.deploy(address(token), merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt);
+        factory.deploy(
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
+        );
     }
 
     // ============ Edge Case Tests ============
 
     function test_deployWithCliffEqualToDuration() public {
         address deployer = factory.deploy(
-            address(token), merkleRoot, vestingStart, vestingDuration, vestingDuration, claimDeadline, salt
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            vestingDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
         );
         assertTrue(deployer != address(0), "Should allow cliff equal to duration");
     }
 
     function test_deployWithZeroCliff() public {
-        address deployer =
-            factory.deploy(address(token), merkleRoot, vestingStart, vestingDuration, 0, claimDeadline, salt);
+        address deployer = factory.deploy(
+            address(token), merkleRoot, vestingStart, vestingDuration, 0, claimDeadline, feeRecipient, feeBps, salt
+        );
         assertTrue(deployer != address(0), "Should allow zero cliff");
     }
 
     function test_getDeployerAddressIsView() public view {
         // Should be callable as a view function
         factory.getDeployerAddress(
-            address(token), merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt
+            address(token),
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            feeRecipient,
+            feeBps,
+            salt
         );
     }
 }

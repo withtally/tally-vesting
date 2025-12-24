@@ -32,6 +32,8 @@ contract Deploy is Script {
 ///      - VESTING_DURATION: Duration in seconds
 ///      - CLIFF_DURATION: Cliff in seconds
 ///      - CLAIM_DEADLINE: Unix timestamp for claim deadline
+///      - PLATFORM_FEE_RECIPIENT: Optional fee recipient (defaults to zero)
+///      - PLATFORM_FEE_BPS: Optional fee in basis points (defaults to 0)
 contract DeployVesting is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -42,6 +44,8 @@ contract DeployVesting is Script {
         uint64 vestingDuration = uint64(vm.envUint("VESTING_DURATION"));
         uint64 cliffDuration = uint64(vm.envUint("CLIFF_DURATION"));
         uint64 claimDeadline = uint64(vm.envUint("CLAIM_DEADLINE"));
+        address platformFeeRecipient = vm.envOr("PLATFORM_FEE_RECIPIENT", address(0));
+        uint16 platformFeeBps = uint16(vm.envOr("PLATFORM_FEE_BPS", uint256(0)));
 
         MerkleVestingFactory factory = MerkleVestingFactory(factoryAddress);
 
@@ -50,8 +54,17 @@ contract DeployVesting is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        address deployer =
-            factory.deploy(tokenAddress, merkleRoot, vestingStart, vestingDuration, cliffDuration, claimDeadline, salt);
+        address deployer = factory.deploy(
+            tokenAddress,
+            merkleRoot,
+            vestingStart,
+            vestingDuration,
+            cliffDuration,
+            claimDeadline,
+            platformFeeRecipient,
+            platformFeeBps,
+            salt
+        );
 
         console2.log("MerkleVestingDeployer deployed at:", deployer);
         console2.log("Token:", tokenAddress);
@@ -60,6 +73,8 @@ contract DeployVesting is Script {
         console2.log("Vesting Duration:", vestingDuration);
         console2.log("Cliff Duration:", cliffDuration);
         console2.log("Claim Deadline:", claimDeadline);
+        console2.log("Platform Fee Recipient:", platformFeeRecipient);
+        console2.log("Platform Fee Bps:", platformFeeBps);
 
         vm.stopBroadcast();
 

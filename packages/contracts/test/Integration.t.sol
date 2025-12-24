@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {Test, console2} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {MerkleVestingFactory} from "../src/MerkleVestingFactory.sol";
-import {MerkleVestingDeployer} from "../src/MerkleVestingDeployer.sol";
 import {IMerkleVestingDeployer} from "../src/interfaces/IMerkleVestingDeployer.sol";
 import {MerkleTreeHelper} from "./helpers/MerkleTreeHelper.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {VestingWallet} from "@openzeppelin/contracts/finance/VestingWallet.sol";
+import {VestingWalletFeeWrapper} from "../src/VestingWalletFeeWrapper.sol";
 
 /// @notice Mock ERC20 for testing
 contract MockERC20 is ERC20 {
@@ -31,6 +30,7 @@ contract IntegrationTest is Test {
     address public carol = makeAddr("carol");
     address public dave = makeAddr("dave"); // Does not claim
     address public treasury = makeAddr("treasury");
+    address public feeRecipient = makeAddr("feeRecipient");
 
     uint256 public constant ALICE_AMOUNT = 1000 ether;
     uint256 public constant BOB_AMOUNT = 2000 ether;
@@ -45,6 +45,8 @@ contract IntegrationTest is Test {
 
     bytes32 public merkleRoot;
     bytes32[] public leaves;
+
+    uint16 public constant PLATFORM_FEE_BPS = 500;
 
     function setUp() public {
         factory = new MerkleVestingFactory();
@@ -67,7 +69,15 @@ contract IntegrationTest is Test {
         // 1. Factory deploys MerkleVestingDeployer
         bytes32 salt = keccak256("test_salt");
         address deployerAddr = factory.deploy(
-            address(token), merkleRoot, vestingStart, VESTING_DURATION, CLIFF_DURATION, claimDeadline, salt
+            address(token),
+            merkleRoot,
+            vestingStart,
+            VESTING_DURATION,
+            CLIFF_DURATION,
+            claimDeadline,
+            feeRecipient,
+            PLATFORM_FEE_BPS,
+            salt
         );
         IMerkleVestingDeployer deployer = IMerkleVestingDeployer(deployerAddr);
 
@@ -79,14 +89,16 @@ contract IntegrationTest is Test {
         vm.prank(alice);
         address aliceWallet = deployer.claim(aliceProof, ALICE_AMOUNT);
         assertTrue(aliceWallet != address(0));
-        assertEq(token.balanceOf(aliceWallet), ALICE_AMOUNT);
+        address aliceUnderlying = VestingWalletFeeWrapper(payable(aliceWallet)).vestingWallet();
+        assertEq(token.balanceOf(aliceUnderlying), ALICE_AMOUNT);
 
         // 3. Bob claims for Carol (Relayer Claim)
         bytes32[] memory carolProof = MerkleTreeHelper.getProof(leaves, 2);
         vm.prank(bob);
         address carolWallet = deployer.claimFor(carol, carolProof, CAROL_AMOUNT);
         assertTrue(carolWallet != address(0));
-        assertEq(token.balanceOf(carolWallet), CAROL_AMOUNT);
+        address carolUnderlying = VestingWalletFeeWrapper(payable(carolWallet)).vestingWallet();
+        assertEq(token.balanceOf(carolUnderlying), CAROL_AMOUNT);
 
         // 4. Bob claims for himself
         bytes32[] memory bobProof = MerkleTreeHelper.getProof(leaves, 1);
@@ -99,26 +111,33 @@ contract IntegrationTest is Test {
         // 5. Check vesting
         // Move to inside cliff (no vesting yet)
         vm.warp(vestingStart + CLIFF_DURATION / 2);
-        assertEq(VestingWallet(payable(aliceWallet)).vestedAmount(address(token), uint64(block.timestamp)), 0);
+        assertEq(
+            VestingWalletFeeWrapper(payable(aliceWallet)).vestedAmount(address(token), uint64(block.timestamp)), 0
+        );
 
         // Move to just past cliff
         vm.warp(vestingStart + CLIFF_DURATION + 1);
-        uint256 vested = VestingWallet(payable(aliceWallet)).vestedAmount(address(token), uint64(block.timestamp));
+        uint256 vested =
+            VestingWalletFeeWrapper(payable(aliceWallet)).vestedAmount(address(token), uint64(block.timestamp));
         assertTrue(vested > 0);
         assertTrue(vested < ALICE_AMOUNT);
 
         // Release some tokens for Alice
         vm.prank(alice);
-        VestingWallet(payable(aliceWallet)).release(address(token));
-        assertEq(token.balanceOf(alice), vested);
+        VestingWalletFeeWrapper(payable(aliceWallet)).release(address(token));
+        uint256 aliceFee = vested * PLATFORM_FEE_BPS / 10_000;
+        assertEq(token.balanceOf(alice), vested - aliceFee);
+        assertEq(token.balanceOf(feeRecipient), aliceFee);
 
         // Move to end of vesting
         vm.warp(vestingStart + VESTING_DURATION);
 
         // Release all for Carol
         vm.prank(carol);
-        VestingWallet(payable(carolWallet)).release(address(token));
-        assertEq(token.balanceOf(carol), CAROL_AMOUNT);
+        VestingWalletFeeWrapper(payable(carolWallet)).release(address(token));
+        uint256 carolFee = CAROL_AMOUNT * PLATFORM_FEE_BPS / 10_000;
+        assertEq(token.balanceOf(carol), CAROL_AMOUNT - carolFee);
+        assertEq(token.balanceOf(feeRecipient), aliceFee + carolFee);
 
         // 6. Sweep unclaimed tokens (Dave's portion)
         // Try sweep before deadline (should fail)

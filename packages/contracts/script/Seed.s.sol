@@ -38,6 +38,7 @@ contract Seed is Script {
     // Vesting parameters
     uint64 public constant VESTING_DURATION = 365 days;
     uint64 public constant CLIFF_DURATION = 90 days;
+    uint16 public constant PLATFORM_FEE_BPS = 0;
 
     // Test user amounts
     uint256[] public amounts;
@@ -109,7 +110,15 @@ contract Seed is Script {
         uint64 claimDeadline = vestingStart + VESTING_DURATION + 180 days;
 
         address vestingDeployer = factory.deploy(
-            address(token), merkleRoot, vestingStart, VESTING_DURATION, CLIFF_DURATION, claimDeadline, bytes32("seed")
+            address(token),
+            merkleRoot,
+            vestingStart,
+            VESTING_DURATION,
+            CLIFF_DURATION,
+            claimDeadline,
+            address(0),
+            PLATFORM_FEE_BPS,
+            bytes32("seed")
         );
         console2.log("MerkleVestingDeployer deployed at:", vestingDeployer);
 
@@ -178,6 +187,8 @@ contract Seed is Script {
         console2.log('    "vestingDuration": %d,', VESTING_DURATION);
         console2.log('    "cliffDuration": %d,', CLIFF_DURATION);
         console2.log('    "claimDeadline": %d,', vestingStart + VESTING_DURATION + 180 days);
+        console2.log('    "platformFeeBps": %d,', PLATFORM_FEE_BPS);
+        console2.log('    "platformFeeRecipient": "%s",', vm.toString(address(0)));
         console2.log('    "merkleRoot": "%s"', vm.toString(merkleRoot));
         console2.log("  },");
         console2.log('  "allocations": [');

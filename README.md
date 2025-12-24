@@ -60,6 +60,9 @@ pnpm anvil
 # Seed local deployment
 pnpm seed
 
+# Seed a deployment that exercises the platform fee wrapper
+pnpm seed:fee
+
 # Run indexer (development)
 pnpm indexer:dev
 ```
@@ -79,6 +82,7 @@ See [`docs/`](./docs) for detailed documentation:
 - [Plans](./docs/plans/) - Implementation plans and roadmaps
 - [Learnings](./docs/learnings/) - Development insights and logs
 - [Reference](./docs/reference/) - Technical reference materials
+- [Platform Fee](./docs/reference/platform-fee.md) - Guidance on the optional fee wrapper
 - [Architecture](./docs/architecture/) - System design docs
 - [Decisions](./docs/decisions/) - Architecture decision records
 

@@ -50,6 +50,10 @@ export const deployer = onchainTable(
     cliffDuration: t.bigint().notNull(),
     claimDeadline: t.bigint().notNull(),
 
+    // Platform fee configuration
+    platformFeeRecipient: t.hex().notNull(),
+    platformFeeBps: t.integer().notNull(),
+
     // Allocations
     totalAllocation: t.bigint().notNull(),
     totalClaimed: t.bigint().notNull().default(0n),
@@ -199,6 +203,10 @@ export const vestingWallet = onchainTable(
     vestingEnd: t.bigint().notNull(),
     cliffEnd: t.bigint().notNull(),
 
+    // Platform fee configuration (copied from deployer)
+    platformFeeRecipient: t.hex().notNull(),
+    platformFeeBps: t.integer().notNull(),
+
     // Metadata
     createdAt: t.integer().notNull(),
     createdAtBlock: t.bigint().notNull(),
@@ -246,6 +254,8 @@ export const release = onchainTable(
     // Release details
     tokenAddress: t.hex().notNull(),
     amount: t.bigint().notNull(),
+    feeAmount: t.bigint().notNull(),
+    feeRecipient: t.hex().notNull(),
 
     // Transaction metadata
     releasedAt: t.integer().notNull(),

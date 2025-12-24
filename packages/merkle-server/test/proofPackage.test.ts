@@ -7,7 +7,7 @@ import {
   validateProofPackage,
   verifyProofPackageAgainstRoot,
 } from '../src/services/proofPackage';
-import type { MerkleTree, VestingParams } from '../src/types';
+import type { MerkleTree, VestingParams, PlatformFeeParams } from '../src/types';
 import { BUILD_SPEC } from '../src/services/canonicalize';
 
 // Test data
@@ -26,6 +26,10 @@ const vestingParams: VestingParams = {
   vestingStart: Math.floor(Date.now() / 1000),
   vestingDuration: ONE_YEAR,
   cliffDuration: 90 * ONE_DAY,
+};
+const platformFee: PlatformFeeParams = {
+  feeRecipient: '0x1234567890123456789012345678901234567890' as Hex,
+  feeBps: 250,
 };
 
 describe('ProofPackage Service', () => {
@@ -79,6 +83,26 @@ describe('ProofPackage Service', () => {
       const pkg = generateProofPackage(tree, alice);
 
       expect(pkg.vesting).toEqual(vestingParams);
+    });
+
+    it('includes platform fee when tree has platform fee', () => {
+      const allocations = [{ beneficiary: alice, amount: aliceAmount }];
+      const { root, allocations: allocsWithProof } = buildTree(allocations);
+
+      const tree: MerkleTree = {
+        id: 'test-tree-2b',
+        root,
+        createdAt: new Date().toISOString(),
+        allocations: allocsWithProof,
+        platformFee,
+        buildSpec: BUILD_SPEC,
+        originalInput: { allocations, platformFee },
+        inputHash: '0x1234' as Hex,
+      };
+
+      const pkg = generateProofPackage(tree, alice);
+
+      expect(pkg.platformFee).toEqual(platformFee);
     });
 
     it('includes contract info when provided', () => {
@@ -228,8 +252,9 @@ describe('ProofPackage Service', () => {
         createdAt: new Date().toISOString(),
         allocations: allocsWithProof,
         vesting: vestingParams,
+        platformFee,
         buildSpec: BUILD_SPEC,
-        originalInput: { allocations, token, vesting: vestingParams },
+        originalInput: { allocations, token, vesting: vestingParams, platformFee },
         inputHash: '0x1234' as Hex,
       };
 
@@ -245,6 +270,7 @@ describe('ProofPackage Service', () => {
       expect(pkg.treeId).toBe('test-tree-9');
       expect(pkg.merkleRoot).toBe(root);
       expect(pkg.vesting).toEqual(vestingParams);
+      expect(pkg.platformFee).toEqual(platformFee);
       expect(pkg.contract).toEqual(contractInfo);
       expect(pkg.buildSpec).toEqual(BUILD_SPEC);
     });

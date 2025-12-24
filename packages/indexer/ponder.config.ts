@@ -4,7 +4,7 @@ import { http } from "viem";
 // Import ABIs
 import MerkleVestingFactoryAbi from "./abis/MerkleVestingFactory.json" assert { type: "json" };
 import MerkleVestingDeployerAbi from "./abis/MerkleVestingDeployer.json" assert { type: "json" };
-import VestingWalletCliffConcreteAbi from "./abis/VestingWalletCliffConcrete.json" assert { type: "json" };
+import VestingWalletFeeWrapperAbi from "./abis/VestingWalletFeeWrapper.json" assert { type: "json" };
 
 // ============================================================
 // DETERMINISTIC FACTORY ADDRESS
@@ -55,7 +55,7 @@ export default createConfig({
     // Ponder's factory pattern will track all discovered deployers
     // and listen for VestingClaimed events from each one.
     VestingWallet: {
-      abi: VestingWalletCliffConcreteAbi,
+      abi: VestingWalletFeeWrapperAbi,
       network: "anvil",
       factory: {
         address: FACTORY_ADDRESS,
