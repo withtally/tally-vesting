@@ -10,6 +10,9 @@
     "contracts:test": "pnpm --filter @tally-vesting/contracts test",
     "indexer:dev": "pnpm --filter @tally-vesting/indexer dev",
     "indexer:start": "pnpm --filter @tally-vesting/indexer start",
+    "merkle-server:dev": "pnpm --filter @tally-vesting/merkle-server dev",
+    "merkle-server:start": "pnpm --filter @tally-vesting/merkle-server start",
+    "merkle-server:test": "pnpm --filter @tally-vesting/merkle-server test",
     "anvil": "pnpm --filter @tally-vesting/contracts anvil",
     "seed": "pnpm --filter @tally-vesting/contracts seed"
   }
