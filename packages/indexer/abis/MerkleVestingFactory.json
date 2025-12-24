@@ -1,0 +1,182 @@
+[
+  {
+    "type": "function",
+    "name": "deploy",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "merkleRoot",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "vestingStart",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "vestingDuration",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "cliffDuration",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "claimDeadline",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "deployer",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getDeployerAddress",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "merkleRoot",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "vestingStart",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "vestingDuration",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "cliffDuration",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "claimDeadline",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "DeployerCreated",
+    "inputs": [
+      {
+        "name": "deployer",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "token",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "merkleRoot",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "creator",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "CliffExceedsDuration",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Create2EmptyBytecode",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FailedDeployment",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InsufficientBalance",
+    "inputs": [
+      {
+        "name": "balance",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "needed",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidClaimDeadline",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroMerkleRoot",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroVestingDuration",
+    "inputs": []
+  }
+]

@@ -1,42 +1,68 @@
 import { createConfig } from "ponder";
 import { http } from "viem";
 
-// ERC20 ABI (minimal for Transfer events)
-const erc20Abi = [
-  {
-    type: "event",
-    name: "Transfer",
-    inputs: [
-      { indexed: true, name: "from", type: "address" },
-      { indexed: true, name: "to", type: "address" },
-      { indexed: false, name: "value", type: "uint256" },
-    ],
-  },
-  {
-    type: "event",
-    name: "Approval",
-    inputs: [
-      { indexed: true, name: "owner", type: "address" },
-      { indexed: true, name: "spender", type: "address" },
-      { indexed: false, name: "value", type: "uint256" },
-    ],
-  },
-] as const;
+// Import ABIs
+import MerkleVestingFactoryAbi from "./abis/MerkleVestingFactory.json" assert { type: "json" };
+import MerkleVestingDeployerAbi from "./abis/MerkleVestingDeployer.json" assert { type: "json" };
+import VestingWalletCliffConcreteAbi from "./abis/VestingWalletCliffConcrete.json" assert { type: "json" };
+
+// ============================================================
+// DETERMINISTIC FACTORY ADDRESS
+// ============================================================
+// Deployed via CREATE2 using the canonical deployer (0x4e59b44847b379578588920cA78FbF26c0B4956C)
+// Salt: keccak256("tally-vesting-factory-v1")
+// This address is IDENTICAL on all EVM chains!
+const FACTORY_ADDRESS = "0x6B51bD91c3FF15e34C56D62F7c77892DE7bA3786" as const;
 
 export default createConfig({
   networks: {
-    mainnet: {
-      chainId: 1,
-      transport: http(process.env.PONDER_RPC_URL_1),
+    // Local Anvil only (for development)
+    anvil: {
+      chainId: 31337,
+      transport: http("http://localhost:8545"),
     },
   },
+
   contracts: {
-    // Example ERC20 - USDC on mainnet
-    ERC20: {
-      network: "mainnet",
-      abi: erc20Abi,
-      address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
-      startBlock: 6082465,
+    // ============================================================
+    // FACTORY - Singleton with deterministic address
+    // ============================================================
+    MerkleVestingFactory: {
+      abi: MerkleVestingFactoryAbi,
+      address: FACTORY_ADDRESS,
+      network: "anvil",
+      startBlock: 0,
+    },
+
+    // ============================================================
+    // DEPLOYER - Discovered via factory's DeployerCreated event
+    // ============================================================
+    MerkleVestingDeployer: {
+      abi: MerkleVestingDeployerAbi,
+      network: "anvil",
+      factory: {
+        address: FACTORY_ADDRESS,
+        event: "DeployerCreated",
+        parameter: "deployer",
+      },
+      startBlock: 0,
+    },
+
+    // ============================================================
+    // VESTING WALLET - Discovered via deployer's VestingClaimed event
+    // ============================================================
+    // NOTE: VestingClaimed is emitted by MerkleVestingDeployer contracts.
+    // Ponder's factory pattern will track all discovered deployers
+    // and listen for VestingClaimed events from each one.
+    VestingWallet: {
+      abi: VestingWalletCliffConcreteAbi,
+      network: "anvil",
+      factory: {
+        address: FACTORY_ADDRESS,
+        event: "VestingClaimed",
+        parameter: "wallet",
+      },
+      startBlock: 0,
     },
   },
 });

@@ -18,8 +18,22 @@ contract MockToken is ERC20 {
 
 /// @title Seed
 /// @notice Seeds local Anvil with test vesting data for indexer development
+/// @dev Uses deterministic CREATE2 deployment for the factory - same address on all chains!
 contract Seed is Script {
     using SeedHelper for SeedHelper.Allocation[];
+
+    // ============================================================
+    // DETERMINISTIC DEPLOYMENT CONSTANTS
+    // ============================================================
+    // Canonical CREATE2 deployer - exists on all EVM chains
+    address constant CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
+
+    // Fixed salt for deterministic deployment
+    bytes32 constant FACTORY_SALT = keccak256("tally-vesting-factory-v1");
+
+    // Pre-computed deterministic factory address
+    // This is the SAME address on ALL networks!
+    address constant DETERMINISTIC_FACTORY = 0x6B51bD91c3FF15e34C56D62F7c77892DE7bA3786;
 
     // Vesting parameters
     uint64 public constant VESTING_DURATION = 365 days;
@@ -52,11 +66,31 @@ contract Seed is Script {
         MockToken token = new MockToken();
         console2.log("Token deployed at:", address(token));
 
-        // 2. Deploy MerkleVestingFactory
-        MerkleVestingFactory factory = new MerkleVestingFactory();
-        console2.log("Factory deployed at:", address(factory));
+        // 2. Ensure CREATE2 deployer exists on Anvil
+        if (CREATE2_DEPLOYER.code.length == 0) {
+            console2.log("Deploying CREATE2 deployer...");
+            _deployCreate2Deployer();
+        }
 
-        // 3. Build allocations for 10 test users
+        // 3. Deploy MerkleVestingFactory deterministically
+        address factoryAddress;
+        if (DETERMINISTIC_FACTORY.code.length == 0) {
+            console2.log("Deploying Factory via CREATE2...");
+            bytes memory bytecode = type(MerkleVestingFactory).creationCode;
+            bytes memory payload = abi.encodePacked(FACTORY_SALT, bytecode);
+            (bool success,) = CREATE2_DEPLOYER.call(payload);
+            require(success, "CREATE2 deployment failed");
+            factoryAddress = DETERMINISTIC_FACTORY;
+            require(factoryAddress.code.length > 0, "Factory not deployed at expected address");
+        } else {
+            console2.log("Factory already deployed, reusing...");
+            factoryAddress = DETERMINISTIC_FACTORY;
+        }
+        console2.log("Factory at deterministic address:", factoryAddress);
+
+        MerkleVestingFactory factory = MerkleVestingFactory(factoryAddress);
+
+        // 4. Build allocations for 10 test users
         SeedHelper.Allocation[] memory allocations = new SeedHelper.Allocation[](10);
         uint256 totalAllocation = 0;
 
@@ -66,11 +100,11 @@ contract Seed is Script {
             totalAllocation += amounts[i];
         }
 
-        // 4. Build merkle tree
+        // 5. Build merkle tree
         (bytes32 merkleRoot, bytes32[] memory leaves) = allocations.buildTree();
         console2.log("Merkle root:", uint256(merkleRoot));
 
-        // 5. Deploy MerkleVestingDeployer via factory
+        // 6. Deploy MerkleVestingDeployer via factory
         uint64 vestingStart = uint64(block.timestamp);
         uint64 claimDeadline = vestingStart + VESTING_DURATION + 180 days;
 
@@ -79,20 +113,21 @@ contract Seed is Script {
         );
         console2.log("MerkleVestingDeployer deployed at:", vestingDeployer);
 
-        // 6. Mint tokens to deployer
+        // 7. Mint tokens to deployer
         token.mint(vestingDeployer, totalAllocation);
         console2.log("Minted", totalAllocation / 1e18, "tokens to deployer");
 
-        // 7. Fund test users with ETH for gas (using deployer funds)
+        // 8. Fund test users with ETH for gas (actual transfers during broadcast)
         for (uint256 i = 0; i < 6; i++) {
             address user = vm.addr(i + 1);
-            payable(user).transfer(1 ether);
+            (bool success,) = user.call{value: 1 ether}("");
+            require(success, "ETH transfer failed");
         }
         console2.log("Funded users 1-6 with 1 ETH each");
 
         vm.stopBroadcast();
 
-        // 8. Execute claims for users 1-6 (using their private keys)
+        // 9. Execute claims for users 1-6 (using their private keys)
         IMerkleVestingDeployer vesting = IMerkleVestingDeployer(vestingDeployer);
 
         for (uint256 i = 0; i < 6; i++) {
@@ -105,8 +140,19 @@ contract Seed is Script {
             console2.log("User", i + 1, "claimed. Wallet:", wallet);
         }
 
-        // 9. Output JSON for indexer
-        _outputJson(address(token), address(factory), vestingDeployer, vestingStart, merkleRoot, allocations, leaves);
+        // 10. Output JSON for indexer
+        _outputJson(address(token), factoryAddress, vestingDeployer, vestingStart, merkleRoot, allocations, leaves);
+    }
+
+    /// @notice Deploy the CREATE2 deployer on Anvil (it's not there by default)
+    function _deployCreate2Deployer() internal {
+        // Fund the keyless deployer address
+        address keylessDeployer = 0x3fAB184622Dc19b6109349B94811493BF2a45362;
+        payable(keylessDeployer).transfer(0.1 ether);
+
+        // Use vm.etch to deploy the CREATE2 deployer directly
+        bytes memory deployerCode = hex"7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf3";
+        vm.etch(CREATE2_DEPLOYER, deployerCode);
     }
 
     function _outputJson(
