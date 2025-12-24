@@ -1,6 +1,6 @@
 # Architecture Documentation
 
-> Last updated: 2025-12-23
+> Last updated: 2024-12-24
 
 ## Overview
 
@@ -12,6 +12,7 @@ System design and architecture documents for the Tally Vesting project.
 
 | Date | Document | Status | Description |
 |------|----------|--------|-------------|
+| 2024-12-24 | [merkle-server-safety-2024-12-24.md](./merkle-server-safety-2024-12-24.md) | Active | Merkle server safety features architecture |
 | 2025-12-23 | [system-overview-2025-12-23.md](./system-overview-2025-12-23.md) | Active | Complete system architecture overview |
 
 ## Suggested Documents to Create

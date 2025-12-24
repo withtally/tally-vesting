@@ -25,6 +25,7 @@ Instead of deploying all vesting contracts upfront (expensive for large allocati
 |---------|-------------|
 | [`packages/contracts`](./packages/contracts) | Solidity smart contracts (Foundry) |
 | [`packages/indexer`](./packages/indexer) | Ponder-based blockchain indexer |
+| [`packages/merkle-server`](./packages/merkle-server) | Merkle tree API server with safety features |
 
 ## Quick Start
 
@@ -88,6 +89,12 @@ See [`docs/`](./docs) for detailed documentation:
 - CREATE2 determinism with beneficiary in salt
 - Claim deadline with sweep for unclaimed tokens
 - Reentrancy protection
+
+## Author
+
+**Dennison Bertram** <dennison@tally.xyz>
+
+Built for [Tally](https://tally.xyz) - Onchain Governance
 
 ## License
 

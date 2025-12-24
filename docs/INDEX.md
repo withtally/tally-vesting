@@ -1,6 +1,6 @@
 # Documentation Index
 
-> Last updated: 2025-12-23
+> Last updated: 2024-12-24
 
 ## Overview
 
@@ -19,6 +19,7 @@ This directory contains all project documentation for the Tally Vesting monorepo
 
 | Date | Category | Document | Description |
 |------|----------|----------|-------------|
+| 2024-12-24 | architecture | [merkle-server-safety-2024-12-24.md](./architecture/merkle-server-safety-2024-12-24.md) | Merkle server safety features architecture |
 | 2025-12-23 | architecture | [system-overview-2025-12-23.md](./architecture/system-overview-2025-12-23.md) | Complete system architecture overview |
 | 2025-12-23 | decisions | [adr-001-merkle-vesting-2025-12-23.md](./decisions/adr-001-merkle-vesting-2025-12-23.md) | ADR: Merkle-based vesting |
 | 2025-12-23 | decisions | [adr-002-create2-determinism-2025-12-23.md](./decisions/adr-002-create2-determinism-2025-12-23.md) | ADR: CREATE2 determinism |
@@ -31,14 +32,14 @@ This directory contains all project documentation for the Tally Vesting monorepo
 
 ## Document Count by Category
 
-- Architecture: 1 document
+- Architecture: 2 documents
 - Decisions: 3 ADRs
 - Guides: 1 guide
 - Learnings: 1 document
 - Plans: 2 documents
 - Reference: 1 document
 
-**Total**: 9 documents
+**Total**: 10 documents
 
 ## How to Use This Documentation
 
@@ -53,3 +54,4 @@ Each package maintains its own README for package-specific details:
 
 - [`packages/contracts/README.md`](../packages/contracts/README.md) - Solidity contracts documentation
 - [`packages/indexer/README.md`](../packages/indexer/README.md) - Ponder indexer documentation
+- [`packages/merkle-server/README.md`](../packages/merkle-server/README.md) - Merkle tree API server documentation
