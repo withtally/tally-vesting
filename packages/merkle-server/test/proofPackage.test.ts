@@ -7,7 +7,7 @@ import {
   validateProofPackage,
   verifyProofPackageAgainstRoot,
 } from '../src/services/proofPackage';
-import type { MerkleTree, VestingParams, PlatformFeeParams } from '../src/types';
+import type { MerkleTree, VestingParams, PlatformFeeParams, FrontEndFeeParams } from '../src/types';
 import { BUILD_SPEC } from '../src/services/canonicalize';
 
 // Test data
@@ -30,6 +30,10 @@ const vestingParams: VestingParams = {
 const platformFee: PlatformFeeParams = {
   feeRecipient: '0x1234567890123456789012345678901234567890' as Hex,
   feeBps: 250,
+};
+const frontEndFee: FrontEndFeeParams = {
+  feeRecipient: '0x5B38Da6a701c568545dCfcB03FcB875f56beddC4' as Hex,
+  feeBps: 100,
 };
 
 describe('ProofPackage Service', () => {
@@ -105,6 +109,25 @@ describe('ProofPackage Service', () => {
       expect(pkg.platformFee).toEqual(platformFee);
     });
 
+    it('includes front-end fee when provided', () => {
+      const allocations = [{ beneficiary: alice, amount: aliceAmount }];
+      const { root, allocations: allocsWithProof } = buildTree(allocations);
+
+      const tree: MerkleTree = {
+        id: 'test-tree-2c',
+        root,
+        createdAt: new Date().toISOString(),
+        allocations: allocsWithProof,
+        buildSpec: BUILD_SPEC,
+        originalInput: { allocations },
+        inputHash: '0x1234' as Hex,
+      };
+
+      const pkg = generateProofPackage(tree, alice, { frontEndFee });
+
+      expect(pkg.frontEndFee).toEqual(frontEndFee);
+    });
+
     it('includes contract info when provided', () => {
       const allocations = [{ beneficiary: alice, amount: aliceAmount }];
       const { root, allocations: allocsWithProof } = buildTree(allocations);
@@ -126,7 +149,7 @@ describe('ProofPackage Service', () => {
         token,
       };
 
-      const pkg = generateProofPackage(tree, alice, contractInfo);
+      const pkg = generateProofPackage(tree, alice, { contractInfo });
 
       expect(pkg.contract).toEqual(contractInfo);
     });
@@ -264,7 +287,7 @@ describe('ProofPackage Service', () => {
         token,
       };
 
-      const pkg = generateBatchProofPackage(tree, contractInfo);
+      const pkg = generateBatchProofPackage(tree, { contractInfo });
 
       expect(pkg.version).toBe('1.0');
       expect(pkg.treeId).toBe('test-tree-9');
@@ -273,6 +296,25 @@ describe('ProofPackage Service', () => {
       expect(pkg.platformFee).toEqual(platformFee);
       expect(pkg.contract).toEqual(contractInfo);
       expect(pkg.buildSpec).toEqual(BUILD_SPEC);
+    });
+
+    it('includes front-end fee when provided', () => {
+      const allocations = [{ beneficiary: alice, amount: aliceAmount }];
+      const { root, allocations: allocsWithProof } = buildTree(allocations);
+
+      const tree: MerkleTree = {
+        id: 'test-tree-11',
+        root,
+        createdAt: new Date().toISOString(),
+        allocations: allocsWithProof,
+        buildSpec: BUILD_SPEC,
+        originalInput: { allocations },
+        inputHash: '0x1234' as Hex,
+      };
+
+      const pkg = generateBatchProofPackage(tree, { frontEndFee });
+
+      expect(pkg.frontEndFee).toEqual(frontEndFee);
     });
   });
 
@@ -367,6 +409,50 @@ describe('ProofPackage Service', () => {
 
       expect(validation.valid).toBe(false);
       expect(validation.errors.some((e) => e.includes('version'))).toBe(true);
+    });
+
+    it('rejects front-end fee when recipient is invalid', () => {
+      const allocations = [{ beneficiary: alice, amount: aliceAmount }];
+      const { root, allocations: allocsWithProof } = buildTree(allocations);
+
+      const tree: MerkleTree = {
+        id: 'test-tree-14',
+        root,
+        createdAt: new Date().toISOString(),
+        allocations: allocsWithProof,
+        buildSpec: BUILD_SPEC,
+        originalInput: { allocations },
+        inputHash: '0x1234' as Hex,
+      };
+
+      const pkg = generateProofPackage(tree, alice);
+      pkg.frontEndFee = { feeRecipient: '0xabc', feeBps: 10 };
+
+      const validation = validateProofPackage(pkg);
+      expect(validation.valid).toBe(false);
+      expect(validation.errors).toContain('frontEndFee.feeRecipient must be a valid address');
+    });
+
+    it('rejects front-end fee when feeBps is out of range', () => {
+      const allocations = [{ beneficiary: alice, amount: aliceAmount }];
+      const { root, allocations: allocsWithProof } = buildTree(allocations);
+
+      const tree: MerkleTree = {
+        id: 'test-tree-15',
+        root,
+        createdAt: new Date().toISOString(),
+        allocations: allocsWithProof,
+        buildSpec: BUILD_SPEC,
+        originalInput: { allocations },
+        inputHash: '0x1234' as Hex,
+      };
+
+      const pkg = generateProofPackage(tree, alice);
+      pkg.frontEndFee = { feeRecipient: frontEndFee.feeRecipient, feeBps: 20000 };
+
+      const validation = validateProofPackage(pkg);
+      expect(validation.valid).toBe(false);
+      expect(validation.errors).toContain('frontEndFee.feeBps must be between 0 and 10000');
     });
   });
 

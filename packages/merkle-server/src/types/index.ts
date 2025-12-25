@@ -18,6 +18,14 @@ export interface PlatformFeeParams {
 }
 
 /**
+ * Optional front-end fee attribution parameters
+ */
+export interface FrontEndFeeParams {
+  feeRecipient: Hex;
+  feeBps: number; // 0-10,000
+}
+
+/**
  * Input allocation for creating a merkle tree
  */
 export interface Allocation {
@@ -166,6 +174,7 @@ export interface ProofPackage {
   proof: Hex[];
   vesting?: VestingParams;
   platformFee?: PlatformFeeParams;
+  frontEndFee?: FrontEndFeeParams;
   contract?: {
     chainId: number;
     deployerAddress: Hex;
@@ -190,6 +199,7 @@ export interface BatchProofPackage {
   }>;
   vesting?: VestingParams;
   platformFee?: PlatformFeeParams;
+  frontEndFee?: FrontEndFeeParams;
   contract?: {
     chainId: number;
     deployerAddress: Hex;

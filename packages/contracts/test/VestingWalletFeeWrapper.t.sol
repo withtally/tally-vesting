@@ -21,6 +21,7 @@ contract VestingWalletFeeWrapperTest is Test {
 
     address public beneficiary = makeAddr("beneficiary");
     address public feeRecipient = makeAddr("feeRecipient");
+    address public frontEndRecipient = makeAddr("frontEnd");
 
     uint64 public constant VESTING_DURATION = 365 days;
 
@@ -39,7 +40,9 @@ contract VestingWalletFeeWrapperTest is Test {
             VESTING_DURATION,
             0,
             feeRecipient,
-            feeBps
+            feeBps,
+            address(0),
+            0
         );
 
         uint256 amount = 1000 ether;
@@ -62,6 +65,8 @@ contract VestingWalletFeeWrapperTest is Test {
             address(token),
             vestingStart,
             VESTING_DURATION,
+            0,
+            address(0),
             0,
             address(0),
             0
@@ -88,7 +93,9 @@ contract VestingWalletFeeWrapperTest is Test {
             VESTING_DURATION,
             0,
             address(0),
-            1
+            1,
+            address(0),
+            0
         );
     }
 
@@ -103,7 +110,42 @@ contract VestingWalletFeeWrapperTest is Test {
             VESTING_DURATION,
             0,
             feeRecipient,
-            10_001
+            10_001,
+            address(0),
+            0
         );
+    }
+
+    function test_releaseAllocatesFrontEndShare() public {
+        uint64 vestingStart = uint64(block.timestamp);
+        uint16 platformFeeBps = 500; // 5%
+        uint16 frontEndFeeBps = 200; // 2%
+
+        VestingWalletFeeWrapper wrapper = new VestingWalletFeeWrapper(
+            beneficiary,
+            address(token),
+            vestingStart,
+            VESTING_DURATION,
+            0,
+            feeRecipient,
+            platformFeeBps,
+            frontEndRecipient,
+            frontEndFeeBps
+        );
+
+        uint256 amount = 1000 ether;
+        token.mint(wrapper.vestingWallet(), amount);
+
+        vm.warp(vestingStart + VESTING_DURATION);
+        wrapper.release(address(token));
+
+        uint256 totalFee = (amount * platformFeeBps) / 10_000;
+        uint256 expectedFrontEnd = (amount * frontEndFeeBps) / 10_000;
+        uint256 expectedPlatform = totalFee - expectedFrontEnd;
+
+        assertEq(token.balanceOf(frontEndRecipient), expectedFrontEnd);
+        assertEq(token.balanceOf(feeRecipient), expectedPlatform);
+        assertEq(token.balanceOf(beneficiary), amount - totalFee);
+        assertEq(token.balanceOf(address(wrapper)), 0);
     }
 }

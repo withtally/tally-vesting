@@ -89,10 +89,21 @@ interface IMerkleVestingDeployer {
     function hasClaimed(address beneficiary) external view returns (bool);
 
     /// @notice Get the deterministic VestingWallet address for a beneficiary
-    /// @dev Uses CREATE2, so address is known before deployment
+    /// @dev Uses CREATE2, so address is known before deployment. Uses default front-end parameters (zeroed).
     /// @param beneficiary The beneficiary address
     /// @return The VestingWallet address (may not be deployed yet)
     function getVestingWallet(address beneficiary) external view returns (address);
+
+    /// @notice Get the deterministic VestingWallet address for a beneficiary given optional front-end attribution
+    /// @param beneficiary The beneficiary address
+    /// @param frontEndFeeRecipient Recipient for the front-end fee portion
+    /// @param frontEndFeeBps Basis points routed to the front-end (must be <= platformFeeBps)
+    /// @return The VestingWallet address (may not be deployed yet)
+    function getVestingWallet(
+        address beneficiary,
+        address frontEndFeeRecipient,
+        uint16 frontEndFeeBps
+    ) external view returns (address);
 
     /// @notice Verify a merkle proof without claiming
     /// @param beneficiary The beneficiary in the leaf
@@ -110,6 +121,19 @@ interface IMerkleVestingDeployer {
     /// @return wallet The deployed VestingWallet address
     function claim(bytes32[] calldata proof, uint256 amount) external returns (address wallet);
 
+    /// @notice Claim vesting allocation for msg.sender with an attributed front-end fee
+    /// @param proof The merkle proof for the claim
+    /// @param amount The token amount being claimed (must match leaf)
+    /// @param frontEndFeeRecipient Recipient for the share of platform fee earned by the front-end facilitator
+    /// @param frontEndFeeBps Basis points (0-10,000) of the claimed amount routed to the front-end
+    /// @return wallet The deployed VestingWallet address
+    function claim(
+        bytes32[] calldata proof,
+        uint256 amount,
+        address frontEndFeeRecipient,
+        uint16 frontEndFeeBps
+    ) external returns (address wallet);
+
     /// @notice Claim vesting allocation on behalf of a beneficiary
     /// @dev Useful for relayers or batch claiming. Wallet is still owned by beneficiary.
     /// @param beneficiary The beneficiary address
@@ -119,6 +143,21 @@ interface IMerkleVestingDeployer {
     function claimFor(address beneficiary, bytes32[] calldata proof, uint256 amount)
         external
         returns (address wallet);
+
+    /// @notice Claim vesting allocation on behalf of a beneficiary with an attributed front-end fee
+    /// @param beneficiary The beneficiary address
+    /// @param proof The merkle proof for the claim
+    /// @param amount The token amount being claimed
+    /// @param frontEndFeeRecipient Recipient for the share of platform fee earned by the front-end facilitator
+    /// @param frontEndFeeBps Basis points (0-10,000) of the claimed amount routed to the front-end
+    /// @return wallet The deployed VestingWallet address
+    function claimFor(
+        address beneficiary,
+        bytes32[] calldata proof,
+        uint256 amount,
+        address frontEndFeeRecipient,
+        uint16 frontEndFeeBps
+    ) external returns (address wallet);
 
     /// @notice Sweep unclaimed tokens after deadline
     /// @dev Permissionless by design - anyone can call this function after claimDeadline.

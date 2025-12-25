@@ -18,6 +18,8 @@ const platformFee = {
   feeRecipient: '0x1234567890123456789012345678901234567890' as Hex,
   feeBps: 250,
 };
+const frontEndFeeRecipient = '0x5b38da6a701c568545dcfcb03fcb875f56beddc4' as Hex;
+const frontEndFeeBps = 100;
 
 describe('API Routes', () => {
   beforeEach(async () => {
@@ -855,6 +857,77 @@ describe('API Routes', () => {
       const body = await res.json();
       expect(body.error).toBe('Beneficiary not found in tree');
     });
+
+    it('includes front-end fee metadata when requested', async () => {
+      const createRes = await app.request('/trees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          allocations: [
+            { beneficiary: alice, amount: aliceAmount },
+            { beneficiary: bob, amount: bobAmount },
+          ],
+          platformFee,
+        }),
+      });
+      const created = await createRes.json();
+
+      const res = await app.request(
+        `/trees/${created.id}/download/${alice}?frontEndFeeRecipient=${frontEndFeeRecipient}&frontEndFeeBps=${frontEndFeeBps}`
+      );
+      expect(res.status).toBe(200);
+
+      const pkg = await res.json();
+      expect(pkg.frontEndFee).toEqual({
+        feeRecipient: frontEndFeeRecipient,
+        feeBps: frontEndFeeBps,
+      });
+    });
+
+    it('rejects front-end fee when platform fee is missing', async () => {
+      const createRes = await app.request('/trees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          allocations: [
+            { beneficiary: alice, amount: aliceAmount },
+            { beneficiary: bob, amount: bobAmount },
+          ],
+        }),
+      });
+      const created = await createRes.json();
+
+      const res = await app.request(
+        `/trees/${created.id}/download/${alice}?frontEndFeeRecipient=${frontEndFeeRecipient}&frontEndFeeBps=${frontEndFeeBps}`
+      );
+      expect(res.status).toBe(400);
+
+      const body = await res.json();
+      expect(body.error).toContain('platform fee');
+    });
+
+    it('rejects front-end fee when BPS exceeds platform limit', async () => {
+      const createRes = await app.request('/trees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          allocations: [
+            { beneficiary: alice, amount: aliceAmount },
+            { beneficiary: bob, amount: bobAmount },
+          ],
+          platformFee: { ...platformFee, feeBps: 150 },
+        }),
+      });
+      const created = await createRes.json();
+
+      const res = await app.request(
+        `/trees/${created.id}/download/${alice}?frontEndFeeRecipient=${frontEndFeeRecipient}&frontEndFeeBps=200`
+      );
+      expect(res.status).toBe(400);
+
+      const body = await res.json();
+      expect(body.error).toContain('cannot exceed');
+    });
   });
 
   describe('GET /trees/:id/download', () => {
@@ -914,6 +987,32 @@ describe('API Routes', () => {
       const contentDisposition = res.headers.get('Content-Disposition');
       expect(contentDisposition).toContain('attachment');
       expect(contentDisposition).toContain('batch-proof');
+    });
+
+    it('includes front-end fee metadata when requested', async () => {
+      const createRes = await app.request('/trees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          allocations: [
+            { beneficiary: alice, amount: aliceAmount },
+            { beneficiary: bob, amount: bobAmount },
+          ],
+          platformFee,
+        }),
+      });
+      const created = await createRes.json();
+
+      const res = await app.request(
+        `/trees/${created.id}/download?frontEndFeeRecipient=${frontEndFeeRecipient}&frontEndFeeBps=${frontEndFeeBps}`
+      );
+      expect(res.status).toBe(200);
+
+      const pkg = await res.json();
+      expect(pkg.frontEndFee).toEqual({
+        feeRecipient: frontEndFeeRecipient,
+        feeBps: frontEndFeeBps,
+      });
     });
   });
 

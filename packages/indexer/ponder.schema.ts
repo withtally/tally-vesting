@@ -254,8 +254,10 @@ export const release = onchainTable(
     // Release details
     tokenAddress: t.hex().notNull(),
     amount: t.bigint().notNull(),
-    feeAmount: t.bigint().notNull(),
-    feeRecipient: t.hex().notNull(),
+    platformFeeAmount: t.bigint().notNull(),
+    platformFeeRecipient: t.hex().notNull(),
+    frontEndFeeAmount: t.bigint().notNull(),
+    frontEndFeeRecipient: t.hex().notNull(),
 
     // Transaction metadata
     releasedAt: t.integer().notNull(),

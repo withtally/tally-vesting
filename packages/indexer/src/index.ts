@@ -416,8 +416,10 @@ ponder.on("MerkleVestingDeployer:VestingClaimed", async ({ event, context }) => 
  * event ERC20Released(
  *   address indexed token,
  *   uint256 amount,
- *   uint256 feeAmount,
- *   address indexed feeRecipient
+ *   uint256 platformFeeAmount,
+ *   address indexed platformFeeRecipient,
+ *   uint256 frontEndFeeAmount,
+ *   address indexed frontEndFeeRecipient
  * )
  *
  * Creates:
@@ -429,7 +431,14 @@ ponder.on("MerkleVestingDeployer:VestingClaimed", async ({ event, context }) => 
  * - Token stats (totalReleasedAmount)
  */
 ponder.on("VestingWallet:ERC20Released", async ({ event, context }) => {
-  const { token: tokenAddress, amount, feeAmount, feeRecipient } = event.args;
+  const {
+    token: tokenAddress,
+    amount,
+    platformFeeAmount,
+    platformFeeRecipient,
+    frontEndFeeAmount,
+    frontEndFeeRecipient,
+  } = event.args;
   const { db, network } = context;
 
   const chainId = network.chainId;
@@ -469,8 +478,10 @@ ponder.on("VestingWallet:ERC20Released", async ({ event, context }) => {
     beneficiaryId,
     tokenAddress,
     amount,
-    feeAmount,
-    feeRecipient,
+    platformFeeAmount,
+    platformFeeRecipient,
+    frontEndFeeAmount,
+    frontEndFeeRecipient,
     releasedAt: timestamp,
     blockNumber,
     txHash,
@@ -493,7 +504,8 @@ ponder.on("VestingWallet:ERC20Released", async ({ event, context }) => {
   await db
     .update(account, { id: beneficiaryId })
     .set((row) => ({
-      totalReleasedAmount: row.totalReleasedAmount + (amount - feeAmount),
+      totalReleasedAmount:
+        row.totalReleasedAmount + (amount - platformFeeAmount - frontEndFeeAmount),
       releaseCount: row.releaseCount + 1,
     }));
 

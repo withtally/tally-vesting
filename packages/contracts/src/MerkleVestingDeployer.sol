@@ -84,8 +84,17 @@ contract MerkleVestingDeployer is IMerkleVestingDeployer {
 
     /// @inheritdoc IMerkleVestingDeployer
     function getVestingWallet(address beneficiary) public view returns (address) {
+        return getVestingWallet(beneficiary, address(0), 0);
+    }
+
+    /// @inheritdoc IMerkleVestingDeployer
+    function getVestingWallet(
+        address beneficiary,
+        address frontEndFeeRecipient,
+        uint16 frontEndFeeBps
+    ) public view returns (address) {
         bytes32 salt = keccak256(abi.encodePacked(beneficiary));
-        bytes memory bytecode = _getVestingWalletBytecode(beneficiary);
+        bytes memory bytecode = _getVestingWalletBytecode(beneficiary, frontEndFeeRecipient, frontEndFeeBps);
         return Create2.computeAddress(salt, keccak256(bytecode));
     }
 
@@ -99,7 +108,17 @@ contract MerkleVestingDeployer is IMerkleVestingDeployer {
 
     /// @inheritdoc IMerkleVestingDeployer
     function claim(bytes32[] calldata proof, uint256 amount) external returns (address wallet) {
-        return _claim(msg.sender, proof, amount);
+        return _claim(msg.sender, proof, amount, address(0), 0);
+    }
+
+    /// @inheritdoc IMerkleVestingDeployer
+    function claim(
+        bytes32[] calldata proof,
+        uint256 amount,
+        address frontEndFeeRecipient,
+        uint16 frontEndFeeBps
+    ) external returns (address wallet) {
+        return _claim(msg.sender, proof, amount, frontEndFeeRecipient, frontEndFeeBps);
     }
 
     /// @inheritdoc IMerkleVestingDeployer
@@ -108,7 +127,19 @@ contract MerkleVestingDeployer is IMerkleVestingDeployer {
         returns (address wallet)
     {
         if (beneficiary == address(0)) revert ZeroAddress();
-        return _claim(beneficiary, proof, amount);
+        return _claim(beneficiary, proof, amount, address(0), 0);
+    }
+
+    /// @inheritdoc IMerkleVestingDeployer
+    function claimFor(
+        address beneficiary,
+        bytes32[] calldata proof,
+        uint256 amount,
+        address frontEndFeeRecipient,
+        uint16 frontEndFeeBps
+    ) external returns (address wallet) {
+        if (beneficiary == address(0)) revert ZeroAddress();
+        return _claim(beneficiary, proof, amount, frontEndFeeRecipient, frontEndFeeBps);
     }
 
     /// @inheritdoc IMerkleVestingDeployer
@@ -125,7 +156,13 @@ contract MerkleVestingDeployer is IMerkleVestingDeployer {
 
     // ============ Internal Functions ============
 
-    function _claim(address beneficiary, bytes32[] calldata proof, uint256 amount) internal returns (address wallet) {
+    function _claim(
+        address beneficiary,
+        bytes32[] calldata proof,
+        uint256 amount,
+        address frontEndFeeRecipient,
+        uint16 frontEndFeeBps
+    ) internal returns (address wallet) {
         if (amount == 0) revert ZeroAmount();
         if (block.timestamp > claimDeadline) revert ClaimDeadlinePassed();
         if (_claimed[beneficiary]) revert AlreadyClaimed();
@@ -138,7 +175,8 @@ contract MerkleVestingDeployer is IMerkleVestingDeployer {
 
         // Deploy VestingWallet via CREATE2
         bytes32 salt = keccak256(abi.encodePacked(beneficiary));
-        bytes memory bytecode = _getVestingWalletBytecode(beneficiary);
+        bytes memory bytecode =
+            _getVestingWalletBytecode(beneficiary, frontEndFeeRecipient, frontEndFeeBps);
         wallet = Create2.deploy(0, salt, bytecode);
 
         // Transfer tokens to the underlying VestingWallet
@@ -148,7 +186,11 @@ contract MerkleVestingDeployer is IMerkleVestingDeployer {
         emit VestingClaimed(beneficiary, wallet, amount);
     }
 
-    function _getVestingWalletBytecode(address beneficiary) internal view returns (bytes memory) {
+    function _getVestingWalletBytecode(
+        address beneficiary,
+        address frontEndFeeRecipient,
+        uint16 frontEndFeeBps
+    ) internal view returns (bytes memory) {
         return abi.encodePacked(
             type(VestingWalletFeeWrapper).creationCode,
             abi.encode(
@@ -158,7 +200,9 @@ contract MerkleVestingDeployer is IMerkleVestingDeployer {
                 vestingDuration,
                 cliffDuration,
                 platformFeeRecipient,
-                platformFeeBps
+                platformFeeBps,
+                frontEndFeeRecipient,
+                frontEndFeeBps
             )
         );
     }

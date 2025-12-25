@@ -1,6 +1,8 @@
 import { createConfig } from "ponder";
 import { http } from "viem";
 
+const INDEXER_RPC_URL = process.env.INDEXER_RPC_URL ?? "http://localhost:8545";
+
 // Import ABIs
 import MerkleVestingFactoryAbi from "./abis/MerkleVestingFactory.json" assert { type: "json" };
 import MerkleVestingDeployerAbi from "./abis/MerkleVestingDeployer.json" assert { type: "json" };
@@ -19,7 +21,7 @@ export default createConfig({
     // Local Anvil only (for development)
     anvil: {
       chainId: 31337,
-      transport: http("http://localhost:8545"),
+      transport: http(INDEXER_RPC_URL),
     },
   },
 
@@ -49,19 +51,11 @@ export default createConfig({
     },
 
     // ============================================================
-    // VESTING WALLET - Discovered via deployer's VestingClaimed event
+    // VESTING WALLET - Track release events emitted by the wrapper.
     // ============================================================
-    // NOTE: VestingClaimed is emitted by MerkleVestingDeployer contracts.
-    // Ponder's factory pattern will track all discovered deployers
-    // and listen for VestingClaimed events from each one.
     VestingWallet: {
       abi: VestingWalletFeeWrapperAbi,
       network: "anvil",
-      factory: {
-        address: FACTORY_ADDRESS,
-        event: "VestingClaimed",
-        parameter: "wallet",
-      },
       startBlock: 0,
     },
   },

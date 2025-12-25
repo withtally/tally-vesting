@@ -32,6 +32,7 @@ contract MerkleVestingDeployerTest is Test {
     address public carol = makeAddr("carol");
     address public treasury = makeAddr("treasury");
     address public platformFeeRecipient = makeAddr("platformFeeRecipient");
+    address public frontEndRecipient = makeAddr("frontEndRecipient");
 
     uint256 public constant ALICE_AMOUNT = 1000 ether;
     uint256 public constant BOB_AMOUNT = 2000 ether;
@@ -394,5 +395,65 @@ contract MerkleVestingDeployerTest is Test {
         assertEq(wrapper.platformFeeRecipient(), platformFeeRecipient);
         assertEq(wrapper.platformFeeBps(), feeBps);
         assertEq(wrapper.beneficiary(), alice);
+    }
+
+    function test_claimWithFrontEndAttributes() public {
+        uint16 feeBps = 500;
+        uint16 frontEndFeeBps = 200;
+        MerkleVestingDeployer feeDeployer = new MerkleVestingDeployer(
+            address(token),
+            merkleRoot,
+            vestingStart,
+            VESTING_DURATION,
+            CLIFF_DURATION,
+            claimDeadline,
+            platformFeeRecipient,
+            feeBps
+        );
+        token.mint(address(feeDeployer), TOTAL_ALLOCATION);
+
+        bytes32[] memory proof = MerkleTreeHelper.getProof(leaves, 0);
+        address predicted =
+            feeDeployer.getVestingWallet(alice, frontEndRecipient, frontEndFeeBps);
+
+        vm.prank(alice);
+        address wallet =
+            feeDeployer.claim(proof, ALICE_AMOUNT, frontEndRecipient, frontEndFeeBps);
+
+        assertEq(wallet, predicted);
+
+        VestingWalletFeeWrapper wrapper = VestingWalletFeeWrapper(payable(wallet));
+        assertEq(wrapper.frontEndFeeRecipient(), frontEndRecipient);
+        assertEq(wrapper.frontEndFeeBps(), frontEndFeeBps);
+    }
+
+    function test_claimForWithFrontEndAttributes() public {
+        uint16 feeBps = 400;
+        uint16 frontEndFeeBps = 150;
+        MerkleVestingDeployer feeDeployer = new MerkleVestingDeployer(
+            address(token),
+            merkleRoot,
+            vestingStart,
+            VESTING_DURATION,
+            CLIFF_DURATION,
+            claimDeadline,
+            platformFeeRecipient,
+            feeBps
+        );
+        token.mint(address(feeDeployer), TOTAL_ALLOCATION);
+
+        bytes32[] memory proof = MerkleTreeHelper.getProof(leaves, 0);
+        address predicted =
+            feeDeployer.getVestingWallet(alice, frontEndRecipient, frontEndFeeBps);
+
+        vm.prank(bob);
+        address wallet =
+            feeDeployer.claimFor(alice, proof, ALICE_AMOUNT, frontEndRecipient, frontEndFeeBps);
+
+        assertEq(wallet, predicted);
+
+        VestingWalletFeeWrapper wrapper = VestingWalletFeeWrapper(payable(wallet));
+        assertEq(wrapper.frontEndFeeRecipient(), frontEndRecipient);
+        assertEq(wrapper.frontEndFeeBps(), frontEndFeeBps);
     }
 }

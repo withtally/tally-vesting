@@ -14,12 +14,26 @@ contract VestingWalletFeeWrapper {
     // ============ Errors ============
 
     error InvalidPlatformFee();
+    error InvalidFrontEndFee();
     error ZeroAddress();
 
     // ============ Events ============
 
-    event ERC20Released(address indexed token, uint256 amount, uint256 feeAmount, address indexed feeRecipient);
-    event EtherReleased(uint256 amount, uint256 feeAmount, address indexed feeRecipient);
+    event ERC20Released(
+        address indexed token,
+        uint256 amount,
+        uint256 platformFeeAmount,
+        address indexed platformFeeRecipient,
+        uint256 frontEndFeeAmount,
+        address indexed frontEndFeeRecipient
+    );
+    event EtherReleased(
+        uint256 amount,
+        uint256 platformFeeAmount,
+        address indexed platformFeeRecipient,
+        uint256 frontEndFeeAmount,
+        address indexed frontEndFeeRecipient
+    );
 
     // ============ Immutables ============
 
@@ -27,6 +41,8 @@ contract VestingWalletFeeWrapper {
     address public immutable token;
     address public immutable platformFeeRecipient;
     uint16 public immutable platformFeeBps;
+    address public immutable frontEndFeeRecipient;
+    uint16 public immutable frontEndFeeBps;
     VestingWalletCliffConcrete private immutable _vestingWallet;
     address public immutable vestingWallet;
 
@@ -39,16 +55,22 @@ contract VestingWalletFeeWrapper {
         uint64 vestingDuration,
         uint64 cliffDuration,
         address platformFeeRecipient_,
-        uint16 platformFeeBps_
+        uint16 platformFeeBps_,
+        address frontEndFeeRecipient_,
+        uint16 frontEndFeeBps_
     ) {
         if (beneficiary_ == address(0) || token_ == address(0)) revert ZeroAddress();
         if (platformFeeBps_ > 10_000) revert InvalidPlatformFee();
         if (platformFeeBps_ > 0 && platformFeeRecipient_ == address(0)) revert InvalidPlatformFee();
+        if (frontEndFeeBps_ > platformFeeBps_) revert InvalidFrontEndFee();
+        if (frontEndFeeBps_ > 0 && frontEndFeeRecipient_ == address(0)) revert InvalidFrontEndFee();
 
         beneficiary = beneficiary_;
         token = token_;
         platformFeeRecipient = platformFeeRecipient_;
         platformFeeBps = platformFeeBps_;
+        frontEndFeeRecipient = frontEndFeeRecipient_;
+        frontEndFeeBps = frontEndFeeBps_;
 
         VestingWalletCliffConcrete wallet =
             new VestingWalletCliffConcrete(address(this), vestingStart, vestingDuration, cliffDuration);
@@ -115,23 +137,50 @@ contract VestingWalletFeeWrapper {
     // ============ Internal Functions ============
 
     function _distributeERC20(address tokenAddress, uint256 amount) internal {
-        uint256 feeAmount = _calculateFee(amount);
-        if (feeAmount > 0) {
-            IERC20(tokenAddress).safeTransfer(platformFeeRecipient, feeAmount);
+        uint256 totalFeeAmount = _calculateFee(amount);
+        uint256 frontEndFeeAmount = _calculateFrontEndFee(amount);
+        uint256 platformFeeAmount = totalFeeAmount - frontEndFeeAmount;
+
+        if (platformFeeAmount > 0) {
+            IERC20(tokenAddress).safeTransfer(platformFeeRecipient, platformFeeAmount);
         }
 
-        IERC20(tokenAddress).safeTransfer(beneficiary, amount - feeAmount);
-        emit ERC20Released(tokenAddress, amount, feeAmount, platformFeeRecipient);
+        if (frontEndFeeAmount > 0) {
+            IERC20(tokenAddress).safeTransfer(frontEndFeeRecipient, frontEndFeeAmount);
+        }
+
+        IERC20(tokenAddress).safeTransfer(beneficiary, amount - totalFeeAmount);
+        emit ERC20Released(
+            tokenAddress,
+            amount,
+            platformFeeAmount,
+            platformFeeRecipient,
+            frontEndFeeAmount,
+            frontEndFeeRecipient
+        );
     }
 
     function _distributeEther(uint256 amount) internal {
-        uint256 feeAmount = _calculateFee(amount);
-        if (feeAmount > 0) {
-            Address.sendValue(payable(platformFeeRecipient), feeAmount);
+        uint256 totalFeeAmount = _calculateFee(amount);
+        uint256 frontEndFeeAmount = _calculateFrontEndFee(amount);
+        uint256 platformFeeAmount = totalFeeAmount - frontEndFeeAmount;
+
+        if (platformFeeAmount > 0) {
+            Address.sendValue(payable(platformFeeRecipient), platformFeeAmount);
         }
 
-        Address.sendValue(payable(beneficiary), amount - feeAmount);
-        emit EtherReleased(amount, feeAmount, platformFeeRecipient);
+        if (frontEndFeeAmount > 0) {
+            Address.sendValue(payable(frontEndFeeRecipient), frontEndFeeAmount);
+        }
+
+        Address.sendValue(payable(beneficiary), amount - totalFeeAmount);
+        emit EtherReleased(
+            amount,
+            platformFeeAmount,
+            platformFeeRecipient,
+            frontEndFeeAmount,
+            frontEndFeeRecipient
+        );
     }
 
     function _calculateFee(uint256 amount) internal view returns (uint256) {
@@ -139,5 +188,12 @@ contract VestingWalletFeeWrapper {
             return 0;
         }
         return (amount * platformFeeBps) / 10_000;
+    }
+
+    function _calculateFrontEndFee(uint256 amount) internal view returns (uint256) {
+        if (frontEndFeeBps == 0) {
+            return 0;
+        }
+        return (amount * frontEndFeeBps) / 10_000;
     }
 }

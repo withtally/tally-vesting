@@ -6,7 +6,20 @@ import type {
   ProofPackage,
   BatchProofPackage,
   ProofPackageValidation,
+  FrontEndFeeParams,
 } from '../types';
+
+interface ProofPackageOptions {
+  contractInfo?: { chainId: number; deployerAddress: Hex; token?: Hex };
+  frontEndFee?: FrontEndFeeParams;
+}
+
+interface BatchProofPackageOptions {
+  contractInfo?: { chainId: number; deployerAddress: Hex; token?: Hex };
+  frontEndFee?: FrontEndFeeParams;
+}
+
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const;
 
 /**
  * Generate a self-custody proof package for a single beneficiary
@@ -14,7 +27,7 @@ import type {
 export function generateProofPackage(
   tree: MerkleTree,
   beneficiary: Hex,
-  contractInfo?: { chainId: number; deployerAddress: Hex; token?: Hex }
+  options?: ProofPackageOptions
 ): ProofPackage {
   // Find the allocation for this beneficiary (case-insensitive)
   const allocation = tree.allocations.find(
@@ -46,8 +59,12 @@ export function generateProofPackage(
     pkg.platformFee = tree.platformFee;
   }
 
-  if (contractInfo) {
-    pkg.contract = contractInfo;
+  if (options?.contractInfo) {
+    pkg.contract = options.contractInfo;
+  }
+
+  if (options?.frontEndFee) {
+    pkg.frontEndFee = options.frontEndFee;
   }
 
   return pkg;
@@ -58,7 +75,7 @@ export function generateProofPackage(
  */
 export function generateBatchProofPackage(
   tree: MerkleTree,
-  contractInfo?: { chainId: number; deployerAddress: Hex; token?: Hex }
+  options?: BatchProofPackageOptions
 ): BatchProofPackage {
   const pkg: BatchProofPackage = {
     version: '1.0',
@@ -83,8 +100,12 @@ export function generateBatchProofPackage(
     pkg.platformFee = tree.platformFee;
   }
 
-  if (contractInfo) {
-    pkg.contract = contractInfo;
+  if (options?.contractInfo) {
+    pkg.contract = options.contractInfo;
+  }
+
+  if (options?.frontEndFee) {
+    pkg.frontEndFee = options.frontEndFee;
   }
 
   return pkg;
@@ -151,6 +172,29 @@ export function validateProofPackage(pkg: unknown): ProofPackageValidation {
   // Validate buildSpec
   if (typeof p.buildSpec !== 'object' || p.buildSpec === null) {
     errors.push('buildSpec must be an object');
+  }
+
+  if (p.frontEndFee !== undefined) {
+    if (typeof p.frontEndFee !== 'object' || p.frontEndFee === null) {
+      errors.push('frontEndFee must be an object');
+    } else {
+      const fee = p.frontEndFee as Record<string, unknown>;
+      if (typeof fee.feeRecipient !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(fee.feeRecipient)) {
+        errors.push('frontEndFee.feeRecipient must be a valid address');
+      }
+
+      if (typeof fee.feeBps !== 'number' || !Number.isInteger(fee.feeBps)) {
+        errors.push('frontEndFee.feeBps must be an integer');
+      } else {
+        if (fee.feeBps < 0 || fee.feeBps > 10_000) {
+          errors.push('frontEndFee.feeBps must be between 0 and 10000');
+        }
+
+        if (fee.feeBps > 0 && fee.feeRecipient === ZERO_ADDRESS) {
+          errors.push('frontEndFee.feeRecipient is required when feeBps is greater than 0');
+        }
+      }
+    }
   }
 
   return {

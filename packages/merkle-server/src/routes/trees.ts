@@ -9,7 +9,13 @@ import { canonicalizeAllocations, computeInputHash, BUILD_SPEC } from '../servic
 import { rebuildTree, rebuildFromStoredInput } from '../services/rebuild';
 import { generateProofPackage, generateBatchProofPackage } from '../services/proofPackage';
 import { serializeTreeForIpfs, computeContentHash } from '../services/ipfs';
-import type { CreateTreeRequest, MerkleTree, ProofResponse, VestingStatus } from '../types';
+import type {
+  CreateTreeRequest,
+  MerkleTree,
+  ProofResponse,
+  VestingStatus,
+  FrontEndFeeParams,
+} from '../types';
 
 const trees = new Hono();
 
@@ -53,6 +59,64 @@ const createTreeRequestSchema = z.object({
   vesting: vestingSchema.optional(),
   platformFee: platformFeeSchema.optional(),
 });
+
+type FrontEndFeeParseResult = {
+  frontEndFee?: FrontEndFeeParams;
+  error?: string;
+};
+
+function parseFrontEndFeeParams(
+  tree: MerkleTree,
+  recipientParam?: string,
+  bpsParam?: string
+): FrontEndFeeParseResult {
+  const hasRecipient = Boolean(recipientParam);
+  const hasBps = Boolean(bpsParam);
+
+  if (!hasRecipient && !hasBps) {
+    return {};
+  }
+
+  if (!hasBps) {
+    return { error: 'frontEndFeeBps is required when specifying front-end attribution' };
+  }
+
+  const parsedBps = Number(bpsParam);
+
+  if (!Number.isInteger(parsedBps) || parsedBps < 0 || parsedBps > 10_000) {
+    return { error: 'frontEndFeeBps must be an integer between 0 and 10000' };
+  }
+
+  if (parsedBps > 0 && !hasRecipient) {
+    return { error: 'frontEndFeeRecipient is required when feeBps is greater than 0' };
+  }
+
+  let normalizedRecipient = ZERO_ADDRESS as Hex;
+
+  if (hasRecipient) {
+    const parsed = addressSchema.safeParse(recipientParam);
+    if (!parsed.success) {
+      return { error: 'frontEndFeeRecipient must be a valid address' };
+    }
+    normalizedRecipient = parsed.data.toLowerCase() as Hex;
+  }
+
+  const platformBps = tree.platformFee?.feeBps ?? 0;
+  if (platformBps === 0 && parsedBps > 0) {
+    return { error: 'Cannot attribute front-end fee without a platform fee' };
+  }
+
+  if (parsedBps > platformBps) {
+    return { error: `frontEndFeeBps cannot exceed platform fee BPS (${platformBps})` };
+  }
+
+  return {
+    frontEndFee: {
+      feeRecipient: normalizedRecipient,
+      feeBps: parsedBps,
+    },
+  };
+}
 
 /**
  * GET /trees - List all trees
@@ -314,8 +378,20 @@ trees.get('/:id/download/:address', async (c) => {
   }
 
   try {
+    const frontEndResult = parseFrontEndFeeParams(
+      tree,
+      c.req.query('frontEndFeeRecipient'),
+      c.req.query('frontEndFeeBps')
+    );
+
+    if (frontEndResult.error) {
+      return c.json({ error: frontEndResult.error }, 400);
+    }
+
     // Generate proof package
-    const pkg = generateProofPackage(tree, address);
+    const pkg = generateProofPackage(tree, address, {
+      frontEndFee: frontEndResult.frontEndFee,
+    });
 
     // Set download headers
     c.header('Content-Disposition', `attachment; filename="proof-${address.toLowerCase()}.json"`);
@@ -342,8 +418,20 @@ trees.get('/:id/download', async (c) => {
     return c.json({ error: 'Tree not found' }, 404);
   }
 
+  const frontEndResult = parseFrontEndFeeParams(
+    tree,
+    c.req.query('frontEndFeeRecipient'),
+    c.req.query('frontEndFeeBps')
+  );
+
+  if (frontEndResult.error) {
+    return c.json({ error: frontEndResult.error }, 400);
+  }
+
   // Generate batch proof package
-  const pkg = generateBatchProofPackage(tree);
+  const pkg = generateBatchProofPackage(tree, {
+    frontEndFee: frontEndResult.frontEndFee,
+  });
 
   // Set download headers
   c.header('Content-Disposition', `attachment; filename="batch-proof-${id}.json"`);

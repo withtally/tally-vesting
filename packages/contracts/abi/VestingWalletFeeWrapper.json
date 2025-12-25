@@ -36,6 +36,16 @@
         "name": "platformFeeBps_",
         "type": "uint16",
         "internalType": "uint16"
+      },
+      {
+        "name": "frontEndFeeRecipient_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "frontEndFeeBps_",
+        "type": "uint16",
+        "internalType": "uint16"
       }
     ],
     "stateMutability": "nonpayable"
@@ -75,6 +85,32 @@
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "frontEndFeeBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "frontEndFeeRecipient",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -288,13 +324,25 @@
         "internalType": "uint256"
       },
       {
-        "name": "feeAmount",
+        "name": "platformFeeAmount",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       },
       {
-        "name": "feeRecipient",
+        "name": "platformFeeRecipient",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "frontEndFeeAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "frontEndFeeRecipient",
         "type": "address",
         "indexed": true,
         "internalType": "address"
@@ -313,13 +361,25 @@
         "internalType": "uint256"
       },
       {
-        "name": "feeAmount",
+        "name": "platformFeeAmount",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       },
       {
-        "name": "feeRecipient",
+        "name": "platformFeeRecipient",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "frontEndFeeAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "frontEndFeeRecipient",
         "type": "address",
         "indexed": true,
         "internalType": "address"
@@ -347,6 +407,11 @@
         "internalType": "uint256"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidFrontEndFee",
+    "inputs": []
   },
   {
     "type": "error",

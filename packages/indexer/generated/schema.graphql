@@ -297,8 +297,10 @@ type release {
   beneficiaryId: String!
   tokenAddress: String!
   amount: BigInt!
-  feeAmount: BigInt!
-  feeRecipient: String!
+  platformFeeAmount: BigInt!
+  platformFeeRecipient: String!
+  frontEndFeeAmount: BigInt!
+  frontEndFeeRecipient: String!
   releasedAt: Int!
   blockNumber: BigInt!
   txHash: String!
@@ -729,24 +731,42 @@ input releaseFilter {
   amount_lt: BigInt
   amount_gte: BigInt
   amount_lte: BigInt
-  feeAmount: BigInt
-  feeAmount_not: BigInt
-  feeAmount_in: [BigInt]
-  feeAmount_not_in: [BigInt]
-  feeAmount_gt: BigInt
-  feeAmount_lt: BigInt
-  feeAmount_gte: BigInt
-  feeAmount_lte: BigInt
-  feeRecipient: String
-  feeRecipient_not: String
-  feeRecipient_in: [String]
-  feeRecipient_not_in: [String]
-  feeRecipient_contains: String
-  feeRecipient_not_contains: String
-  feeRecipient_starts_with: String
-  feeRecipient_ends_with: String
-  feeRecipient_not_starts_with: String
-  feeRecipient_not_ends_with: String
+  platformFeeAmount: BigInt
+  platformFeeAmount_not: BigInt
+  platformFeeAmount_in: [BigInt]
+  platformFeeAmount_not_in: [BigInt]
+  platformFeeAmount_gt: BigInt
+  platformFeeAmount_lt: BigInt
+  platformFeeAmount_gte: BigInt
+  platformFeeAmount_lte: BigInt
+  platformFeeRecipient: String
+  platformFeeRecipient_not: String
+  platformFeeRecipient_in: [String]
+  platformFeeRecipient_not_in: [String]
+  platformFeeRecipient_contains: String
+  platformFeeRecipient_not_contains: String
+  platformFeeRecipient_starts_with: String
+  platformFeeRecipient_ends_with: String
+  platformFeeRecipient_not_starts_with: String
+  platformFeeRecipient_not_ends_with: String
+  frontEndFeeAmount: BigInt
+  frontEndFeeAmount_not: BigInt
+  frontEndFeeAmount_in: [BigInt]
+  frontEndFeeAmount_not_in: [BigInt]
+  frontEndFeeAmount_gt: BigInt
+  frontEndFeeAmount_lt: BigInt
+  frontEndFeeAmount_gte: BigInt
+  frontEndFeeAmount_lte: BigInt
+  frontEndFeeRecipient: String
+  frontEndFeeRecipient_not: String
+  frontEndFeeRecipient_in: [String]
+  frontEndFeeRecipient_not_in: [String]
+  frontEndFeeRecipient_contains: String
+  frontEndFeeRecipient_not_contains: String
+  frontEndFeeRecipient_starts_with: String
+  frontEndFeeRecipient_ends_with: String
+  frontEndFeeRecipient_not_starts_with: String
+  frontEndFeeRecipient_not_ends_with: String
   releasedAt: Int
   releasedAt_not: Int
   releasedAt_in: [Int]

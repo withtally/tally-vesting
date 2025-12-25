@@ -20,7 +20,7 @@ Sometimes a distributor wants to deduct a small fee whenever beneficiaries relea
 
 - `deployer` table now stores `platformFeeRecipient` / `platformFeeBps`.
 - `vesting_wallet` rows copy those fields so each wallet carries the fee context.
-- `release` rows record `feeAmount` and `feeRecipient` alongside the `amount`.
+- `release` rows record both `platformFee*` and `frontEndFee*` columns (`Amount` + `Recipient`) alongside the released `amount`, so GraphQL consumers can see how each payout was split.
 - `Ponder`'s `VestingClaimed` listener discovers wrapper addresses that embed the fee (the ABI has been updated accordingly).
 
 Re-run `pnpm indexer:dev` after redeploying so the new schema picks up the fields.
@@ -91,5 +91,17 @@ The Merkle server now:
    ```
 
    The response should include the deterministic factory (e.g., `31337_0x6b51...`) and `deployerCount: 1`. If you need a richer view, query `releases` to confirm `feeAmount`/`feeRecipient` are being stored.
+
+7. To inspect platform/front-end splits from the indexer, point your curl at whichever GraphQL port the server settled on (42082 in this session):
+
+   ```bash
+   curl -s -X POST http://localhost:42082 \
+     -H 'Content-Type: application/json' \
+     -d '{"query":"{ releases(limit: 5) { items { id amount platformFeeAmount frontEndFeeAmount platformFeeRecipient frontEndFeeRecipient vestingWalletId tokenAddress } } }"}'
+   ```
+
+   You should see release rows where `platformFeeRecipient`/`frontEndFeeRecipient` match the seed fixture addresses and the amounts are split accordingly.
+
+8. The indexer now requires the generated schema file (`packages/indexer/generated/schema.graphql`) whenever it starts so the new `release` columns exist. Set `DATABASE_SCHEMA=packages/indexer/generated/schema.graphql` when running `pnpm indexer:start`/`pnpm indexer:dev`.
 
 7. Once the indexer has processed the events, the `progress` table reports releases (e.g., `VestingWallet:ERC20Released` entries with fee metadata) and the GraphQL schema exposes those fields for dashboards and proofs.
